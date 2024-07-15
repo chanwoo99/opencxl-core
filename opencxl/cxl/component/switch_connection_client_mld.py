@@ -126,7 +126,7 @@ class SwitchConnectionClient(RunnableComponent):
         self._packet_processor = CxlPacketProcessor(
             reader,
             writer,
-            self._cxl_connection,
+            self._cxl_connections,
             self._component_type,
             label=f"ClientPort{self._port_index}",
         )
