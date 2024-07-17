@@ -5,7 +5,7 @@
  See LICENSE for details.
 """
 
-from asyncio import StreamReader, StreamWriter, create_task, gather, Queue
+from asyncio import StreamReader, StreamWriter, create_task, gather, Queue, sleep
 from dataclasses import dataclass
 from enum import StrEnum, IntEnum
 from typing import cast, Optional, Dict, Union, List
@@ -190,8 +190,9 @@ class CxlPacketProcessor(RunnableComponent):
         else:
             ld_id = -1
         if (tid,ld_id) not in self._tlp_table:
-            raise Exception(f"tid ({tid:02x}) is not found in the TLP table")
+            raise Exception(f"tid ({tid:02x}-{ld_id}) is not found in the TLP table")
         fifo_type = self._tlp_table[(tid,ld_id)]
+
         del self._tlp_table[(tid,ld_id)]
         return fifo_type
 
@@ -202,14 +203,15 @@ class CxlPacketProcessor(RunnableComponent):
                 packet = await self._reader.get_packet()
                 # io need be modified to supprots MLD
                 if packet.is_cxl_io():
+                    
                     cxl_io_packet = cast(CxlIoBasePacket, packet)
                     if cxl_io_packet.is_cpl() or cxl_io_packet.is_cpld():
-                        print("check!!!!!!!")
                         logger.debug(
                             self._create_message(
                                 f"Received {self._incoming_dir} CXL.io (CPL/CPLD) packet"
                             )
                         )
+                        
                         fifo_type = self._pop_tlp_table_entry(cxl_io_packet)
                         #MLD
                         if self._component_type == CXL_COMPONENT_TYPE.LD:
@@ -228,6 +230,7 @@ class CxlPacketProcessor(RunnableComponent):
                             self._create_message(
                                 f"Received {self._incoming_dir} CXL.io (CFG_RD/CFG_WR) packet"
                             )
+                            
                         )
                         self._push_tlp_table_entry(cxl_io_packet)
                         #MLD
@@ -247,7 +250,7 @@ class CxlPacketProcessor(RunnableComponent):
                         #MLD
                         if self._component_type == CXL_COMPONENT_TYPE.LD:
                             ld_id = cxl_io_packet.cxl_io_header.ld_id
-                            await self._incoming.mmio[ld_id].put(cxl_io_packet)
+                            await self._incoming[ld_id].mmio.put(cxl_io_packet)
                         else:
                             await self._incoming.mmio.put(cxl_io_packet)
                     else:
@@ -255,7 +258,7 @@ class CxlPacketProcessor(RunnableComponent):
                         logger.debug(self._create_message(packet.get_pretty_string()))
                         raise Exception("Received unexpected CXL.io packet")
                 elif packet.is_cxl_mem():
-                    if self._incoming.cxl_mem is None:
+                    if self._component_type != CXL_COMPONENT_TYPE.LD and self._incoming.cxl_mem is None:
                         logger.error(self._create_message("Got CXL.mem packet on no CXL.mem FIFO"))
                         continue
                     logger.debug(
@@ -266,10 +269,16 @@ class CxlPacketProcessor(RunnableComponent):
                         # LD routing code
                         if cxl_mem_packet.is_m2sreq():
                             ld_id = cxl_mem_packet.m2sreq_header.ld_id
-                        else:
+                        elif cxl_mem_packet.is_m2srwd():
                             ld_id = cxl_mem_packet.m2srwd_header.ld_id
+                        elif cxl_mem_packet.is_s2mndr():                        
+                            ld_id = cxl_mem_packet.s2mndr_header.ld_id
+                        elif cxl_mem_packet.is_s2mdrs():
+                            ld_id = cxl_mem_packet.s2mdrs_header.ld_id
+                        else:
+                            logger.warning(self._create_message("Unexpected CXL.mem packet"))
 
-                        await self._incoming.cxl_mem[ld_id].put(cxl_mem_packet)
+                        await self._incoming[ld_id].cxl_mem.put(cxl_mem_packet)
                     else:                        
                         await self._incoming.cxl_mem.put(cxl_mem_packet)
 
@@ -309,10 +318,19 @@ class CxlPacketProcessor(RunnableComponent):
         logger.debug(self._create_message("Starting outgoing CFG FIFO processor"))
         while True:
             if self._component_type == CXL_COMPONENT_TYPE.LD:
-                await FifoGroup.merge_groups(self._outgoing)
-                packet = await self._outgoing[0].cfg_space.get()
+                flag = False
+                while True:
+                    for queue in self._outgoing:
+                        if not queue.cfg_space.empty():
+                            packet = await queue.cfg_space.get()
+                            flag = True           
+                            break
+                    if flag==True:
+                        break
+                    await sleep(0.1)
             else:
-                packet = await self._outgoing.cfg_space.get()
+                packet = await self._outgoing.cfg_space.get()         
+                       
             if self._is_disconnection_notification(packet):
                 break
 
@@ -337,8 +355,16 @@ class CxlPacketProcessor(RunnableComponent):
         logger.debug(self._create_message("Starting outgoing MMIO FIFO processor"))
         while True:
             if self._component_type == CXL_COMPONENT_TYPE.LD:
-                await FifoGroup.merge_groups(self._outgoing)
-                packet = await self._outgoing[0].mmio.get()
+                flag = False
+                while True:
+                    for queue in self._outgoing:
+                        if not queue.mmio.empty():
+                            packet = await queue.mmio.get()
+                            flag = True                       
+                            break
+                    if flag==True:
+                        break
+                    await sleep(0.1)
             else:
                 packet = await self._outgoing.mmio.get()
             if self._is_disconnection_notification(packet):
@@ -364,8 +390,16 @@ class CxlPacketProcessor(RunnableComponent):
         logger.debug(self._create_message("Starting outgoing CXL.mem FIFO processor"))
         while True:
             if self._component_type == CXL_COMPONENT_TYPE.LD:
-                await FifoGroup.merge_groups(self._outgoing)
-                packet = await self._outgoing[0].cxl_mem.get()
+                flag = False
+                while True:
+                    for queue in self._outgoing:
+                        if queue.cxl_mem and not queue.cxl_mem.empty():
+                            packet = await queue.cxl_mem.get()
+                            flag = True                    
+                            break
+                    if flag==True:
+                        break
+                    await sleep(0.1)
             else:
                 packet = await self._outgoing.cxl_mem.get()
                 
@@ -391,10 +425,16 @@ class CxlPacketProcessor(RunnableComponent):
             create_task(self._process_outgoing_mmio_packets()),
         ]
         if self._component_type == CXL_COMPONENT_TYPE.LD:
-            if self._outgoing[0].cxl_mem:
-                tasks.append(create_task(self._process_outgoing_cxl_mem_packets()))
-            if self._outgoing[0].cxl_cache:
-                tasks.append(create_task(self._process_outgoing_cxl_cache_packets()))
+            for queue in self._outgoing:
+                if queue.cxl_mem:
+                    tasks.append(create_task(self._process_outgoing_cxl_mem_packets()))      
+                    break
+            for queue in self._outgoing:
+                if queue.cxl_cache:
+                    tasks.append(create_task(self._process_outgoing_cxl_cache_packets()))     
+                    break              
+   
+
         else:
             if self._outgoing.cxl_mem:
                 tasks.append(create_task(self._process_outgoing_cxl_mem_packets()))

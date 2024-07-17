@@ -30,6 +30,9 @@ class PPB_BINDING_STATUS(IntEnum):
     BOUND_LD = 0x03
 
 
+
+
+
 @dataclass
 class SwitchUpdateEvent:
     vcs_id: int
@@ -166,7 +169,7 @@ class CxlVirtualSwitch(RunnableComponent):
     async def bind_vppb(self, port_index: int, vppb_index: int):
         if port_index < 0 or port_index >= len(self._physical_ports):
             raise Exception("port_index is out of bound")
-
+        
         port_device = self._physical_ports[port_index]
         if port_device.get_device_type() != CXL_COMPONENT_TYPE.DSP:
             raise Exception(f"physical port {port_index} is not DSP")

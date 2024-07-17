@@ -53,6 +53,7 @@ class HdmDecoderBase:
     iw: int = 0  # interleave ways
 
     def is_hpa_in_range(self, hpa: int) -> bool:
+        print( self.base, "--", hpa, "--",self.base + self.size,"--",self.base <= hpa < (self.base + self.size))
         return self.base <= hpa < (self.base + self.size)
 
 
@@ -244,7 +245,9 @@ class SwitchHdmDecoderManager(HdmDecoderManagerBase):
 
     def get_target(self, hpa: int) -> Optional[int]:
         decoder = self.get_decoder_from_hpa(hpa)
+        
         if not decoder:
             return None
         switch_decoder = cast(SwitchHdmDecoder, decoder)
+        print(decoder)
         return switch_decoder.get_target(hpa)

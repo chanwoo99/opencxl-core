@@ -314,7 +314,7 @@ class CxlRootPortDevice(RunnableComponent):
         packet = CxlMemMemWrPacket.create(address, data)
         await self._downstream_connection.cxl_mem_fifo.host_to_target.put(packet)
         try:
-            async with asyncio.timeout(3):
+            async with asyncio.timeout(20):
                 packet = await self._downstream_connection.cxl_mem_fifo.target_to_host.get()
             assert is_cxl_mem_completion(packet)
             return address - self._cxl_hpa_base
@@ -776,7 +776,6 @@ class CxlRootPortDevice(RunnableComponent):
         # NOTE: Setting up USP
         # --------------------------------------------------
         logger.info(self._create_message(f"Setting up USP at {usp_bdf_str}"))
-
         size = await self.check_bar_size_and_set(usp_bdf, memory_start, mmio_enum_info)
 
         if size > 0:
@@ -803,7 +802,6 @@ class CxlRootPortDevice(RunnableComponent):
 
             logger.info(self._create_message(f"Setting up DSP at ({dsp_bdf_str})"))
             next_bus = next_bus + 1
-
             size = await self.check_bar_size_and_set(dsp_bdf, dsp_memory_start, mmio_enum_info)
 
             if size > 0:
@@ -831,7 +829,7 @@ class CxlRootPortDevice(RunnableComponent):
                     f"Setting up EP at {dsp_device_bdf_str} (Attached to DSP {dsp_bdf_str})"
                 )
             )
-
+            print("----------------------------------")
             size = await self.check_bar_size_and_set(
                 dsp_device_bdf, dsp_memory_start, mmio_enum_info
             )
