@@ -169,6 +169,7 @@ class CxlIoHeader(UnalignedBitStructure):
     at: int
     length_upper: int
     length_lower: int
+    ld_id: int
     _fields = [
         BitField("fmt_type", 0, 7),
         BitField("th", 8, 8),
@@ -183,6 +184,7 @@ class CxlIoHeader(UnalignedBitStructure):
         BitField("ep", 22, 22),
         BitField("td", 23, 23),
         BitField("length_lower", 24, 31),
+        BitField("ld_id", 32,47),
     ]
 
 

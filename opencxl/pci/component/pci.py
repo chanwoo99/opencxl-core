@@ -7,7 +7,7 @@
 
 from dataclasses import dataclass
 from enum import Enum, IntEnum, auto
-from typing import Optional
+from typing import Optional, List
 from opencxl.util.logger import logger
 
 # TODO: Move mmio manager under pci directory
@@ -101,7 +101,8 @@ class PciBridgeComponent(PciComponent):
         self._label = label
         self._type = type
         self._routing_table = None
-        self._port_number = 0
+        self._port_number: List[int] = []
+        self._port_index: List[int] = [0,0,0,0,0,0,0]
 
     def set_routing_table(self, routing_table: PciRoutingTable):
         self._routing_table = routing_table
@@ -109,7 +110,9 @@ class PciBridgeComponent(PciComponent):
     def set_port_number(self, port_number: int):
         if self._type == PCI_BRIDGE_TYPE.UPSTREAM_PORT:
             return
-        self._port_number = port_number
+        #Add MLD function
+        self._port_number.append(port_number)
+        # will be modified later
         self._identity.port_number = port_number
 
     def set_secondary_bus_number(self, bus_number: int):
@@ -121,7 +124,8 @@ class PciBridgeComponent(PciComponent):
             self._routing_table.set_router_bus_number(bus_number)
         else:
             logger.debug(self._create_message("Setting secondary bus number from DSP"))
-            self._routing_table.set_secondary_bus_number(bus_number, self._port_number)
+            self._routing_table.set_secondary_bus_number(bus_number, self._port_number[self._port_index[0]])
+            self._port_index[0] += 1
 
     def set_subordinate_bus_number(self, bus_number: int):
         if self._type == PCI_BRIDGE_TYPE.UPSTREAM_PORT:
@@ -129,7 +133,8 @@ class PciBridgeComponent(PciComponent):
         if not self._routing_table:
             logger.warning(self._create_message("Routing table is not configured yet"))
             return
-        self._routing_table.set_subordinate_bus_number(bus_number, self._port_number)
+        self._routing_table.set_subordinate_bus_number(bus_number, self._port_number[self._port_index[1]])
+        self._port_index[1] += 1
 
     def set_memory_base(self, base: int):
         if not self._routing_table:
@@ -137,7 +142,8 @@ class PciBridgeComponent(PciComponent):
             return
         self._mmio_manager.set_memory_base(base)
         if self._type == PCI_BRIDGE_TYPE.DOWNSTREAM_PORT:
-            self._routing_table.set_memory_base(base, self._port_number)
+            self._routing_table.set_memory_base(base, self._port_number[self._port_index[2]])
+            self._port_index[2] += 1
 
     def set_memory_limit(self, limit: int):
         if not self._routing_table:
@@ -145,7 +151,8 @@ class PciBridgeComponent(PciComponent):
             return
         self._mmio_manager.set_memory_limit(limit)
         if self._type == PCI_BRIDGE_TYPE.DOWNSTREAM_PORT:
-            self._routing_table.set_memory_limit(limit, self._port_number)
+            self._routing_table.set_memory_limit(limit, self._port_number[self._port_index[3]])
+            self._port_index[3] += 1
 
     def set_prefetchable_memory_base(self, base: int):
         if self._type == PCI_BRIDGE_TYPE.UPSTREAM_PORT:
@@ -153,7 +160,8 @@ class PciBridgeComponent(PciComponent):
         if not self._routing_table:
             logger.warning(self._create_message("Routing table is not configured yet"))
             return
-        self._routing_table.set_prefetchable_memory_base(base, self._port_number)
+        self._routing_table.set_prefetchable_memory_base(base, self._port_number[self._port_index[4]])
+        self._port_index[4] += 1
 
     def set_prefetchable_memory_limit(self, limit: int):
         if self._type == PCI_BRIDGE_TYPE.UPSTREAM_PORT:
@@ -161,7 +169,8 @@ class PciBridgeComponent(PciComponent):
         if not self._routing_table:
             logger.warning(self._create_message("Routing table is not configured yet"))
             return
-        self._routing_table.set_prefetchable_memory_limit(limit, self._port_number)
+        self._routing_table.set_prefetchable_memory_limit(limit, self._port_number[self._port_index[5]])
+        self._port_index[5] += 1
 
     def set_bar(self, bar_index: int, base: int, limit: int):
         if self._type == PCI_BRIDGE_TYPE.UPSTREAM_PORT:
@@ -169,7 +178,8 @@ class PciBridgeComponent(PciComponent):
         if not self._routing_table:
             logger.warning(self._create_message("Routing table is not configured yet"))
             return
-        self._routing_table.set_bar(bar_index, base, limit, self._port_number)
+        self._routing_table.set_bar(bar_index, base, limit, self._port_number[self._port_index[6]])
+        self._port_index[6] += 1
 
 
 def memory_base_regval_to_addr(regval: int) -> int:
