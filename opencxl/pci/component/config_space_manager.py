@@ -66,9 +66,9 @@ class ConfigSpaceManager(RunnableComponent):
         packet = CxlIoCompletionPacket.create(req_id, tag, status=CXL_IO_CPL_STATUS.UR)
         # Add MLD
         if self._ld_id is not None:
-            packet.cxl_io_header.ld_id = self._ld_id
+            packet.tlp_prefix.ld_id = self._ld_id
         else:
-            packet.cxl_io_header.ld_id = -1
+            packet.tlp_prefix.ld_id = -1
         await self._upstream_fifo.target_to_host.put(packet)
 
     def _is_bridge(self) -> bool:
@@ -117,9 +117,9 @@ class ConfigSpaceManager(RunnableComponent):
         completion_packet = CxlIoCompletionWithDataPacket.create(req_id, tag, value)
         # Add MLD
         if self._ld_id is not None:
-            completion_packet.cxl_io_header.ld_id = self._ld_id
+            completion_packet.tlp_prefix.ld_id = self._ld_id
         else:
-            completion_packet.cxl_io_header.ld_id = -1
+            completion_packet.tlp_prefix.ld_id = -1
         await self._upstream_fifo.target_to_host.put(completion_packet)
 
     async def _process_cxl_io_cfg_wr(self, cfg_wr_packet: CxlIoCfgWrPacket):
@@ -153,9 +153,9 @@ class ConfigSpaceManager(RunnableComponent):
         completion_packet = CxlIoCompletionPacket.create(req_id, tag)
         # Add MLD
         if self._ld_id is not None:
-            completion_packet.cxl_io_header.ld_id = self._ld_id
+            completion_packet.tlp_prefix.ld_id = self._ld_id
         else:
-            completion_packet.cxl_io_header.ld_id = -1
+            completion_packet.tlp_prefix.ld_id = -1
         await self._upstream_fifo.target_to_host.put(completion_packet)
 
     async def _process_host_to_target(self):

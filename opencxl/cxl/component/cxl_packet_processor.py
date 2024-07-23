@@ -166,7 +166,7 @@ class CxlPacketProcessor(RunnableComponent):
         tid = cxl_io_packet.get_transaction_id()
         # Add MLD
         if self._component_type == CXL_COMPONENT_TYPE.LD:
-            ld_id = cxl_io_packet.cxl_io_header.ld_id
+            ld_id = cxl_io_packet.tlp_prefix.ld_id
         else:
             ld_id = -1
 
@@ -185,7 +185,7 @@ class CxlPacketProcessor(RunnableComponent):
         tid = cxl_io_packet.get_transaction_id()
         # Add MLD
         if self._component_type == CXL_COMPONENT_TYPE.LD:
-            ld_id = cxl_io_packet.cxl_io_header.ld_id
+            ld_id = cxl_io_packet.tlp_prefix.ld_id
         else:
             ld_id = -1
         if (tid, ld_id) not in self._tlp_table:
@@ -211,7 +211,7 @@ class CxlPacketProcessor(RunnableComponent):
                         fifo_type = self._pop_tlp_table_entry(cxl_io_packet)
                         # Add MLD
                         if self._component_type == CXL_COMPONENT_TYPE.LD:
-                            ld_id = cxl_io_packet.cxl_io_header.ld_id
+                            ld_id = cxl_io_packet.tlp_prefix.ld_id
                             if fifo_type == CXL_IO_FIFO_TYPE.CFG:
                                 await self._incoming[ld_id].cfg_space.put(cxl_io_packet)
                             else:
@@ -230,7 +230,7 @@ class CxlPacketProcessor(RunnableComponent):
                         self._push_tlp_table_entry(cxl_io_packet)
                         # Add MLD
                         if self._component_type == CXL_COMPONENT_TYPE.LD:
-                            ld_id = cxl_io_packet.cxl_io_header.ld_id
+                            ld_id = cxl_io_packet.tlp_prefix.ld_id
                             await self._incoming[ld_id].cfg_space.put(cxl_io_packet)
                         else:
                             await self._incoming.cfg_space.put(cxl_io_packet)
@@ -244,7 +244,7 @@ class CxlPacketProcessor(RunnableComponent):
                             self._push_tlp_table_entry(cxl_io_packet)
                         # Add MLD
                         if self._component_type == CXL_COMPONENT_TYPE.LD:
-                            ld_id = cxl_io_packet.cxl_io_header.ld_id
+                            ld_id = cxl_io_packet.tlp_prefix.ld_id
                             await self._incoming[ld_id].mmio.put(cxl_io_packet)
                         else:
                             await self._incoming.mmio.put(cxl_io_packet)
@@ -266,13 +266,13 @@ class CxlPacketProcessor(RunnableComponent):
                     if self._component_type == CXL_COMPONENT_TYPE.LD:
                         # Add LD routing code
                         if cxl_mem_packet.is_m2sreq():
-                            ld_id = cxl_mem_packet.m2sreq_header.ld_id
+                            ld_id = cxl_mem_packet.tlp_prefix.ld_id
                         elif cxl_mem_packet.is_m2srwd():
-                            ld_id = cxl_mem_packet.m2srwd_header.ld_id
+                            ld_id = cxl_mem_packet.tlp_prefix.ld_id
                         elif cxl_mem_packet.is_s2mndr():
-                            ld_id = cxl_mem_packet.s2mndr_header.ld_id
+                            ld_id = cxl_mem_packet.tlp_prefix.ld_id
                         elif cxl_mem_packet.is_s2mdrs():
-                            ld_id = cxl_mem_packet.s2mdrs_header.ld_id
+                            ld_id = cxl_mem_packet.tlp_prefix.ld_id
                         else:
                             logger.warning(self._create_message("Unexpected CXL.mem packet"))
 

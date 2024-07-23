@@ -37,19 +37,37 @@ class SystemHeaderPacket(UnalignedBitStructure):
     ]
 
 
-SYSTEM_HEADER_START = 0x00
-SYSTEM_HEADER_END = SystemHeaderPacket.get_size() - 1
+class TLP_Prefix(UnalignedBitStructure):
+    pcie_base_spec_defined: int
+    ld_id: int
+    reserved: int
+
+    _fields = [
+        BitField("pcie_base_spec_defined", 0, 7),  # 8 비트 PCIe Base Specification Defined
+        BitField("ld_id", 8, 23),  # 16 비트 LD-ID[15:0]
+        BitField("reserved", 24, 31),  # 8 비트 Reserved
+    ]
+
+
+TLP_Prefix_START = 0x00
+TLP_Prefix_END = TLP_Prefix.get_size() - 1
+
+
+SYSTEM_HEADER_START = TLP_Prefix.get_size()
+SYSTEM_HEADER_END = SYSTEM_HEADER_START + SystemHeaderPacket.get_size() - 1
 
 
 class BasePacket(UnalignedBitStructure):
+    tlp_prefix: TLP_Prefix
     system_header: SystemHeaderPacket
     _fields = [
+        StructureField("tlp_prefix", 0, TLP_Prefix.get_size() - 1, TLP_Prefix),
         StructureField(
             "system_header",
-            SYSTEM_HEADER_START,
-            SYSTEM_HEADER_END,
+            TLP_Prefix.get_size(),
+            TLP_Prefix.get_size() + SystemHeaderPacket.get_size() - 1,
             SystemHeaderPacket,
-        )
+        ),
     ]
 
     def is_cxl_io(self) -> bool:

@@ -144,9 +144,9 @@ class MmioManager(PacketProcessor):
             packet = CxlIoCompletionPacket.create(req_id, tag)
         # Add MLD
         if self._ld_id is not None:
-            packet.cxl_io_header.ld_id = self._ld_id
+            packet.tlp_prefix.ld_id = self._ld_id
         else:
-            packet.cxl_io_header.ld_id = -1
+            packet.tlp_prefix.ld_id = -1
         await self._upstream_fifo.target_to_host.put(packet)
 
     async def _forward_request(self, packet: CxlIoBasePacket):
