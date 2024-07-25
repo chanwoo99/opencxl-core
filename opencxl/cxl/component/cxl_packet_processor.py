@@ -141,16 +141,12 @@ class CxlPacketProcessor(RunnableComponent):
                 for cxl_conn in self._cxl_connection
             ]
 
-            self._outgoing = [
-                FifoGroup(
-                    cfg_space=cxl_conn.cfg_fifo.target_to_host,
-                    mmio=cxl_conn.mmio_fifo.target_to_host,
-                    cxl_mem=cxl_conn.cxl_mem_fifo.target_to_host,
+            self._outgoing = FifoGroup(
+                    cfg_space=self._cxl_connection[0].cfg_fifo.target_to_host,
+                    mmio=self._cxl_connection[0].mmio_fifo.target_to_host,
+                    cxl_mem=self._cxl_connection[0].cxl_mem_fifo.target_to_host,
                     cxl_cache=None,
                 )
-                for cxl_conn in self._cxl_connection
-            ]
-
         else:
             raise Exception(f"Unsupported component type {component_type.name}")
 
@@ -316,17 +312,7 @@ class CxlPacketProcessor(RunnableComponent):
         logger.debug(self._create_message("Starting outgoing CFG FIFO processor"))
         # Add MLD
         while True:
-            if self._component_type == CXL_COMPONENT_TYPE.LD:
-                done, pending = await wait(
-                    [create_task(queue.cfg_space.get()) for queue in self._outgoing],
-                    return_when=FIRST_COMPLETED,
-                )
-                for task in pending:
-                    task.cancel()
-                packet = done.pop().result()
-            else:
-                packet = await self._outgoing.cfg_space.get()
-
+            packet = await self._outgoing.cfg_space.get()
             if self._is_disconnection_notification(packet):
                 break
 
@@ -351,16 +337,7 @@ class CxlPacketProcessor(RunnableComponent):
         logger.debug(self._create_message("Starting outgoing MMIO FIFO processor"))
         # Add MLD
         while True:
-            if self._component_type == CXL_COMPONENT_TYPE.LD:
-                done, pending = await wait(
-                    [create_task(queue.mmio.get()) for queue in self._outgoing],
-                    return_when=FIRST_COMPLETED,
-                )
-                for task in pending:
-                    task.cancel()
-                packet = done.pop().result()
-            else:
-                packet = await self._outgoing.mmio.get()
+            packet = await self._outgoing.mmio.get()
             if self._is_disconnection_notification(packet):
                 break
             cxl_io_packet = cast(CxlIoBasePacket, packet)
@@ -383,17 +360,7 @@ class CxlPacketProcessor(RunnableComponent):
     async def _process_outgoing_cxl_mem_packets(self):
         logger.debug(self._create_message("Starting outgoing CXL.mem FIFO processor"))
         while True:
-            if self._component_type == CXL_COMPONENT_TYPE.LD:
-                done, pending = await wait(
-                    [create_task(queue.cxl_mem.get()) for queue in self._outgoing],
-                    return_when=FIRST_COMPLETED,
-                )
-                for task in pending:
-                    task.cancel()
-                packet = done.pop().result()
-            else:
-                packet = await self._outgoing.cxl_mem.get()
-
+            packet = await self._outgoing.cxl_mem.get()
             if self._is_disconnection_notification(packet):
                 break
             self._writer.write(bytes(packet))
@@ -415,22 +382,10 @@ class CxlPacketProcessor(RunnableComponent):
             create_task(self._process_outgoing_cfg_packets()),
             create_task(self._process_outgoing_mmio_packets()),
         ]
-        # Add MLD
-        if self._component_type == CXL_COMPONENT_TYPE.LD:
-            for queue in self._outgoing:
-                if queue.cxl_mem:
-                    tasks.append(create_task(self._process_outgoing_cxl_mem_packets()))
-                    break
-            for queue in self._outgoing:
-                if queue.cxl_cache:
-                    tasks.append(create_task(self._process_outgoing_cxl_cache_packets()))
-                    break
-
-        else:
-            if self._outgoing.cxl_mem:
-                tasks.append(create_task(self._process_outgoing_cxl_mem_packets()))
-            if self._outgoing.cxl_cache:
-                tasks.append(create_task(self._process_outgoing_cxl_cache_packets()))
+        if self._outgoing.cxl_mem:
+            tasks.append(create_task(self._process_outgoing_cxl_mem_packets()))
+        if self._outgoing.cxl_cache:
+            tasks.append(create_task(self._process_outgoing_cxl_cache_packets()))
         await gather(*tasks)
 
     async def _run(self):
