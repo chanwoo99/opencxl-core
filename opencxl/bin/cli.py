@@ -13,7 +13,7 @@ import logging
 
 from opencxl.util.logger import logger
 from opencxl.bin import fabric_manager
-from opencxl.bin import cxl_switch
+from opencxl.bin import cxl_switch, mld_cxl_switch
 from opencxl.bin import single_logical_device as sld
 from opencxl.bin import multi_logical_device as mld
 from opencxl.bin import cxl_host
@@ -26,9 +26,9 @@ def cli():
 
 
 def validate_component(ctx, param, components):
-    valid_components = ["fm", "switch", "host", "host-group", "sld", "sld-group", "mld", "mld-group"]
+    valid_components = ["fm", "switch","mld-switch" ,"host", "host-group", "sld", "sld-group", "mld", "mld-group"]
     if "all" in components:
-        return ("fm", "switch", "host-group", "sld-group", "mld-group")
+        return ("fm", "switch","mld-switch", "host-group", "sld-group", "mld-group")
     for c in components:
         if not c in valid_components:
             raise click.BadParameter(f"Please select from {list(valid_components)}")
@@ -77,7 +77,7 @@ def start(
     """Start components"""
 
     # config file mandatory
-    config_components = ["switch", "sld-group", "host-group", "mld-group"]
+    config_components = ["switch", "sld-group", "host-group", "mld-group",'mld-switch']
     for c in comp:
         if c in config_components and not config_file:
             raise click.BadParameter(f"Must specify <config file> for {config_components}")
@@ -115,6 +115,11 @@ def start(
         t_switch = threading.Thread(target=start_switch, args=(ctx, config_file))
         threads.append(t_switch)
         t_switch.start()
+
+    if "mld-switch" in comp:
+        t_mld_switch = threading.Thread(target=start_mld_switch, args=(ctx, config_file))
+        threads.append(t_mld_switch)
+        t_mld_switch.start()
 
     if "sld" in comp:
         t_sld = threading.Thread(target=start_sld, args=(ctx,))
@@ -197,6 +202,8 @@ def start_fabric_manager(ctx):
 def start_switch(ctx, config_file):
     ctx.invoke(cxl_switch.start, config_file=config_file)
 
+def start_mld_switch(ctx, config_file):
+    ctx.invoke(mld_cxl_switch.start, config_file=config_file)
 
 def start_host(ctx):
     ctx.invoke(cxl_host.start)
