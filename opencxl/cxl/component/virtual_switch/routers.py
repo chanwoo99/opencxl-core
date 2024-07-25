@@ -267,13 +267,13 @@ class CxlMemRouter(CxlRouter):
                 addr = cxl_mem_packet.get_address()
                 target_port = self._routing_table.get_cxl_mem_target_port(addr)
                 # MLD
-                cxl_mem_packet.tlp_prefix.ld_id = target_port
+                cxl_mem_packet.m2sreq_header.ld_id = target_port
             elif cxl_mem_base_packet.is_m2srwd():
                 cxl_mem_packet = cast(CxlMemM2SRwDPacket, packet)
                 addr = cxl_mem_packet.get_address()
                 target_port = self._routing_table.get_cxl_mem_target_port(addr)
                 # MLD
-                cxl_mem_packet.tlp_prefix.ld_id = target_port
+                cxl_mem_packet.m2srwd_header.ld_id = target_port
             else:
                 raise Exception("Received unexpected packet")
 

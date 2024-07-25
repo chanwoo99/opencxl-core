@@ -266,13 +266,13 @@ class CxlPacketProcessor(RunnableComponent):
                     if self._component_type == CXL_COMPONENT_TYPE.LD:
                         # Add LD routing code
                         if cxl_mem_packet.is_m2sreq():
-                            ld_id = cxl_mem_packet.tlp_prefix.ld_id
+                            ld_id = cxl_mem_packet.m2sreq_header.ld_id
                         elif cxl_mem_packet.is_m2srwd():
-                            ld_id = cxl_mem_packet.tlp_prefix.ld_id
+                            ld_id = cxl_mem_packet.m2srwd_header.ld_id
                         elif cxl_mem_packet.is_s2mndr():
-                            ld_id = cxl_mem_packet.tlp_prefix.ld_id
+                            ld_id = cxl_mem_packet.s2mndr_header.ld_id
                         elif cxl_mem_packet.is_s2mdrs():
-                            ld_id = cxl_mem_packet.tlp_prefix.ld_id
+                            ld_id = cxl_mem_packet.s2mdrs_header.ld_id
                         else:
                             logger.warning(self._create_message("Unexpected CXL.mem packet"))
 
