@@ -43,10 +43,6 @@ class MultiLogicalDevice(RunnableComponent):
             )
             self._cxl_type3_devices.append(cxl_type3_device)
 
-        # Temp: copy the HDM decoder settings across LDs, this will be modified later
-        self._cxl_type3_devices[0]._cxl_mem_manager.set_memory_device_component(self._cxl_type3_devices[1]._cxl_memory_device_component)
-
-
     async def _run(self):
         sw_conn_client_task = [create_task(self._sw_conn_client.run())]
         cxl_type3_device_tasks = [create_task(device.run()) for device in self._cxl_type3_devices]
