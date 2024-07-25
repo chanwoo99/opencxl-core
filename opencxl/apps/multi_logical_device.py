@@ -42,8 +42,6 @@ class MultiLogicalDevice(RunnableComponent):
                 ld_id=ld,
             )
             self._cxl_type3_devices.append(cxl_type3_device)
-        #This will be modified later
-        self._cxl_type3_devices[0]._cxl_mem_manager.set_memory_device_component(self._cxl_type3_devices[1]._cxl_memory_device_component)
             
 
     async def _run(self):

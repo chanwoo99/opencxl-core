@@ -12,7 +12,7 @@ from typing import List, Dict, Optional, cast
 from opencxl.cxl.device.port_device import CxlPortDevice
 from opencxl.cxl.device.upstream_port_device import UpstreamPortDevice
 from opencxl.cxl.device.downstream_port_device import DownstreamPortDevice
-from opencxl.cxl.device.config.logical_device import SingleLogicalDeviceConfig
+from opencxl.cxl.device.config.logical_device import SingleLogicalDeviceConfig, MultiLogicalDeviceConfig
 from opencxl.cxl.component.switch_connection_manager import SwitchConnectionManager
 from opencxl.cxl.component.cxl_component import (
     PORT_TYPE,
@@ -52,7 +52,11 @@ class PhysicalPortManager(RunnableComponent):
             if port_config.type == PORT_TYPE.USP:
                 self._port_devices.append(UpstreamPortDevice(transport_connection, port_index))
             else:
-                self._port_devices.append(DownstreamPortDevice(transport_connection, port_index))
+                #Hard coded, this will be modified later
+                num_vppb  = 2
+                if isinstance(self._device_configs[0], SingleLogicalDeviceConfig):
+                    num_vppb = 1
+                self._port_devices.append(DownstreamPortDevice(transport_connection, port_index, num_vppb=num_vppb))
 
     def get_port_device(self, port_index: int) -> CxlPortDevice:
         if port_index < 0 or port_index >= len(self._port_devices):
