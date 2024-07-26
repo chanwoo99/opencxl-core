@@ -18,45 +18,48 @@ class MultiLogicalDevice(RunnableComponent):
     def __init__(
         self,
         num_ld,
-        port_indexes: List[int],
+        port_index: int,
         memory_sizes: List[int],
         memory_files: List[str],
         host: str = "0.0.0.0",
         port: int = 8000
     ):
-        label = "Port " + " ".join([f"{port_index}" for port_index in port_indexes])
+        label = f"Port{port_index}"
         super().__init__(label)
 
-        self._sw_conn_clients = []
         self._cxl_type3_devices = []
 
+        self._sw_conn_client = SwitchConnectionClient(
+            port_index, CXL_COMPONENT_TYPE.LD, num_ld=num_ld, host=host, port=port
+        )
         for ld in range(num_ld):
-            sw_conn_client = SwitchConnectionClient(
-                port_indexes[ld], CXL_COMPONENT_TYPE.D2, host=host, port=port
-            )
-            self._sw_conn_clients.append(sw_conn_client)
             cxl_type3_device = CxlType3Device(
-                transport_connection=self._sw_conn_clients[ld].get_cxl_connection(),
+                transport_connection=self._sw_conn_client.get_cxl_connection()[ld],
                 memory_size=memory_sizes[ld],
                 memory_file=memory_files[ld],
                 dev_type=CXL_T3_DEV_TYPE.MLD,
                 label=label,
+                ld_id=ld,
             )
             self._cxl_type3_devices.append(cxl_type3_device)
 
+        # Temp: copy the HDM decoder settings across LDs, this will be modified later
+        self._cxl_type3_devices[0]._cxl_mem_manager.set_memory_device_component(self._cxl_type3_devices[1]._cxl_memory_device_component)
+
+
     async def _run(self):
-        sw_conn_client_tasks = [create_task(client.run()) for client in self._sw_conn_clients]
+        sw_conn_client_task = [create_task(self._sw_conn_client.run())]
         cxl_type3_device_tasks = [create_task(device.run()) for device in self._cxl_type3_devices]
 
-        tasks = sw_conn_client_tasks + cxl_type3_device_tasks
+        tasks = sw_conn_client_task + cxl_type3_device_tasks
 
         await self._change_status_to_running()
         await gather(*tasks)
 
     async def _stop(self):
-        sw_conn_client_tasks = [create_task(client.stop()) for client in self._sw_conn_clients]
+        sw_conn_client_task = [create_task(self._sw_conn_client.stop())]
         cxl_type3_device_tasks = [create_task(device.stop()) for device in self._cxl_type3_devices]
 
-        tasks = sw_conn_client_tasks + cxl_type3_device_tasks
+        tasks = sw_conn_client_task + cxl_type3_device_tasks
 
         await gather(*tasks)

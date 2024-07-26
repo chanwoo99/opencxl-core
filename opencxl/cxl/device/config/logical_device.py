@@ -25,7 +25,8 @@ class SingleLogicalDeviceConfig:
 @dataclass
 class MultiLogicalDeviceConfig:
     serial_number: List[str]
-    port_index: List[int]
+    port_index: int
+    ld_indexes: List[int]
     memory_size: List[int]  # in bytes
     memory_file: List[str]
     vendor_id: int = EEUM_VID
