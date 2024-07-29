@@ -30,6 +30,5 @@ def start(config_file):
         logger.error(f"Configuration error: {e}")
         return
 
-    # TODO: Support both SLD and MLD
-    switch = CxlSwitch(environment.switch_config, environment.single_logical_device_configs)
+    switch = CxlSwitch(environment.switch_config, environment.single_logical_device_configs, environment.multi_logical_device_configs)
     asyncio.run(switch.run())

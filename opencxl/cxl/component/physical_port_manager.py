@@ -20,7 +20,7 @@ from opencxl.cxl.component.cxl_component import (
     CXL_COMPONENT_TYPE,
 )
 from opencxl.util.component import RunnableComponent
-
+from opencxl.util.logger import logger
 
 @dataclass
 class MemoryDeviceInfo:
@@ -41,22 +41,31 @@ class PhysicalPortManager(RunnableComponent):
         port_configs: List[PortConfig],
         # TODO: CE-35, device enumeration from DSP is not supported yet.
         # Read device configs from an environment file directly as a workaround.
-        device_configs: Optional[List[SingleLogicalDeviceConfig]] = None,
+        sld_configs: Optional[List[SingleLogicalDeviceConfig]] = None,
+        mld_configs: Optional[List[MultiLogicalDeviceConfig]] = None,
     ):
         super().__init__()
         self._port_devices: List[CxlPortDevice] = []
         self._switch_connection_manager = switch_connection_manager
-        self._device_configs = device_configs
+        if sld_configs is None and mld_configs is not None:
+            self._device_configs = mld_configs
+        elif sld_configs is not None and mld_configs is None:
+            self._device_configs = sld_configs
+        elif sld_configs is not None and mld_configs is not None:
+            self._device_configs =   mld_configs + sld_configs # Device configurations must always have MLDs first, followed by SLDs. ex) [MLD1(2lds), SLD1, SLD2]
+        port_counter = 0
         for port_index, port_config in enumerate(port_configs):
             transport_connection = self._switch_connection_manager.get_cxl_connection(port_index)
             if port_config.type == PORT_TYPE.USP:
                 self._port_devices.append(UpstreamPortDevice(transport_connection, port_index))
             else:
-                #Hard coded, this will be modified later
-                num_vppb  = 2
-                if isinstance(self._device_configs[0], SingleLogicalDeviceConfig):
+                device_config = self._device_configs[port_counter]
+                if isinstance(device_config, MultiLogicalDeviceConfig):
+                    num_vppb = len(device_config.ld_indexes)
+                else:
                     num_vppb = 1
                 self._port_devices.append(DownstreamPortDevice(transport_connection, port_index, num_vppb=num_vppb))
+                port_counter += 1
 
     def get_port_device(self, port_index: int) -> CxlPortDevice:
         if port_index < 0 or port_index >= len(self._port_devices):
