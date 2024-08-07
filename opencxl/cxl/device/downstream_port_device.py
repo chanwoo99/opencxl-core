@@ -184,7 +184,6 @@ class DownstreamPortDevice(CxlPortDevice):
     def set_routing_table(self, routing_table: RoutingTable, vppb_index: int):
         if self._is_dummy:
             raise Exception("Dummy Downstream Port does not support updating the routing table")
-        print(self._vppb_bind_table)
         self._pci_bridge_component[self._vppb_bind_table[vppb_index]].set_routing_table(routing_table)
 
     def backup_enumeration_info(self, vppb_index: int) -> EnumerationInfo:
