@@ -66,6 +66,7 @@ def print_result(data):
 # Connect event handler
 @sio.event
 async def connect():
+    '''
     print("Connected to the server")
 
     await send("port:get")
@@ -95,20 +96,37 @@ async def connect():
         "vcs:bind",
         {"virtualCxlSwitchId": 0, "vppbId": 3, "physicalPortId": 4},
     )
+    '''
     # await stop_client()
 
 
 # Disconnect event handler
-@sio.event
-def disconnect():
-    print("Disconnected from server")
-    sys.exit()
+
+
+
+async def bind(vcs: int, vppb:int, physical_port:int):
+    print("bind")
+    await start_client()
+    await send(
+        "vcs:bind",
+        {"virtualCxlSwitchId": vcs, "vppbId": vppb, "physicalPortId": physical_port},
+    )
+    await stop_client()
+
+async def unbind(vcs: int, vppb:int):
+    print("unbind")
+    await start_client()
+    await send(
+        "vcs:unbind",
+        {"virtualCxlSwitchId": vcs, "vppbId": vppb},
+    )
+    await stop_client()
 
 
 # Main asynchronous function to start the client
 async def start_client():
     await sio.connect("http://0.0.0.0:8200")
-    await sio.wait()
+    #await sio.wait()
 
 
 # Stop the client gracefully
@@ -116,6 +134,5 @@ async def stop_client():
     await sio.disconnect()
 
 
-# Run the client
-if __name__ == "__main__":
+if __name__ == '__main__':
     asyncio.run(start_client())

@@ -213,6 +213,7 @@ def foo():
 
 cli.add_command(cxl_host.host_group)
 cli.add_command(mem.mem_group)
+cli.add_command(fabric_manager.fabric_manager_group)
 
 if __name__ == "__main__":
     cli()
