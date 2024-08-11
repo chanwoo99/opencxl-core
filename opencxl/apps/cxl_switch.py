@@ -48,7 +48,8 @@ from opencxl.cxl.cci.vendor_specfic import (
     GetConnectedDevicesCommand,
 )
 from opencxl.util.component import RunnableComponent
-from opencxl.cxl.device.config.logical_device import SingleLogicalDeviceConfig, MultiLogicalDeviceConfig
+from opencxl.cxl.device.config.logical_device import SingleLogicalDeviceConfig
+from opencxl.cxl.device.config.logical_device import MultiLogicalDeviceConfig
 
 
 @dataclass

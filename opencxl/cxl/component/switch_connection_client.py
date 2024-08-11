@@ -8,7 +8,6 @@
 import asyncio
 from typing import cast, Tuple, Optional
 from enum import Enum, auto
-from typing import List
 
 from opencxl.util.logger import logger
 from opencxl.cxl.transport.transaction import (

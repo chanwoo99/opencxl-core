@@ -11,9 +11,6 @@ from asyncio import (
     create_task,
     gather,
     Queue,
-    sleep,
-    wait,
-    FIRST_COMPLETED,
 )
 from dataclasses import dataclass
 from enum import StrEnum, IntEnum
@@ -193,7 +190,7 @@ class CxlPacketProcessor(RunnableComponent):
 
     async def _process_incoming_packets(self):
         logger.debug(self._create_message(f"Starting {self._incoming_dir} packet processor"))
-        while True:
+        while True: # pylint: disable=too-many-nested-blocks
             try:
                 packet = await self._reader.get_packet()
                 if packet.is_cxl_io():

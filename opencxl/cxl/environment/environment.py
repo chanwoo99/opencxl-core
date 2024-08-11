@@ -105,14 +105,14 @@ def parse_single_logical_device_configs(
 
 def parse_multi_logical_device_configs(devices_data) -> List[MultiLogicalDeviceConfig]:
     if not isinstance(devices_data, list):
-        raise ValueError("Invalid 'devices' configuration, expected a list.")        
+        raise ValueError("Invalid 'devices' configuration, expected a list.")
 
     multi_logical_device_configs = []
     for device in devices_data:
         ld_indexes = []
         memory_sizes = []
         memory_files = []
-        serial_numbers = [] 
+        serial_numbers = []
         mld_port_index = device.get("mld_port_index", 0)
 
         for ld in device["lds"]:
@@ -134,11 +134,9 @@ def parse_multi_logical_device_configs(devices_data) -> List[MultiLogicalDeviceC
                 serial_number = ld["serial_number"]
             except KeyError as exc:
                 raise ValueError("Missing 'serial_number' for 'device' entry.") from exc
-            
-
             ld_indexes.append(ld_id)
             memory_sizes.append(memory_size)
-            memory_files.append(memory_file)    
+            memory_files.append(memory_file)
             serial_numbers.append(serial_number)
 
         multi_logical_device_configs.append(

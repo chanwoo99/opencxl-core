@@ -12,7 +12,8 @@ from typing import List, Dict, Optional, cast
 from opencxl.cxl.device.port_device import CxlPortDevice
 from opencxl.cxl.device.upstream_port_device import UpstreamPortDevice
 from opencxl.cxl.device.downstream_port_device import DownstreamPortDevice
-from opencxl.cxl.device.config.logical_device import SingleLogicalDeviceConfig, MultiLogicalDeviceConfig
+from opencxl.cxl.device.config.logical_device import SingleLogicalDeviceConfig
+from opencxl.cxl.device.config.logical_device import MultiLogicalDeviceConfig
 from opencxl.cxl.component.switch_connection_manager import SwitchConnectionManager
 from opencxl.cxl.component.cxl_component import (
     PORT_TYPE,
@@ -20,7 +21,7 @@ from opencxl.cxl.component.cxl_component import (
     CXL_COMPONENT_TYPE,
 )
 from opencxl.util.component import RunnableComponent
-from opencxl.util.logger import logger
+
 
 @dataclass
 class MemoryDeviceInfo:
@@ -52,7 +53,9 @@ class PhysicalPortManager(RunnableComponent):
         elif sld_configs is not None and mld_configs is None:
             self._device_configs = sld_configs
         elif sld_configs is not None and mld_configs is not None:
-            self._device_configs =   mld_configs + sld_configs # Device configurations must always have MLDs first, followed by SLDs. ex) [MLD1(2lds), SLD1, SLD2]
+            # Device configurations must always have MLDs first,
+            # followed by SLDs. ex) [MLD1(2lds), SLD1, SLD2]
+            self._device_configs =   mld_configs + sld_configs
         port_counter = 0
         for port_index, port_config in enumerate(port_configs):
             transport_connection = self._switch_connection_manager.get_cxl_connection(port_index)
@@ -64,7 +67,9 @@ class PhysicalPortManager(RunnableComponent):
                     num_vppb = len(device_config.ld_indexes)
                 else:
                     num_vppb = 1
-                self._port_devices.append(DownstreamPortDevice(transport_connection, port_index, num_vppb=num_vppb))
+                self._port_devices.append(
+                    DownstreamPortDevice(transport_connection, port_index, num_vppb=num_vppb)
+                    )
                 port_counter += 1
 
     def get_port_device(self, port_index: int) -> CxlPortDevice:

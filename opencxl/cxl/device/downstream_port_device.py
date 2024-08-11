@@ -103,8 +103,8 @@ class DownstreamPortDevice(CxlPortDevice):
             label=self._get_label(),
         ) for i in range(num_vppb)]
         self._vppb_bind_table = {}
-        self._available_pcie = [i for i in range(num_vppb)]
-        if (self._is_dummy):
+        self._available_pcie = list(range(num_vppb))
+        if self._is_dummy:
             self.register_vppb(self._vppb_index)
 
 
@@ -181,17 +181,20 @@ class DownstreamPortDevice(CxlPortDevice):
     def get_device_type(self) -> CXL_COMPONENT_TYPE:
         return CXL_COMPONENT_TYPE.DSP
 
-    def set_routing_table(self, routing_table: RoutingTable, vppb_index: int):
+    def set_routing_table(self, routing_table: RoutingTable, vppb_index: int): # pylint: disable=arguments-differ
         if self._is_dummy:
             raise Exception("Dummy Downstream Port does not support updating the routing table")
-        self._pci_bridge_component[self._vppb_bind_table[vppb_index]].set_routing_table(routing_table)
+        self._pci_bridge_component[
+            self._vppb_bind_table[vppb_index]
+            ].set_routing_table(routing_table)
 
     def backup_enumeration_info(self, vppb_index: int) -> EnumerationInfo:
+        pci_register = self._pci_registers[self._vppb_bind_table[vppb_index]].pci
         info = EnumerationInfo(
-            secondary_bus=self._pci_registers[self._vppb_bind_table[vppb_index]].pci.secondary_bus_number,
-            subordinate_bus=self._pci_registers[self._vppb_bind_table[vppb_index]].pci.subordinate_bus_number,
-            memory_base=self._pci_registers[self._vppb_bind_table[vppb_index]].pci.memory_base,
-            memory_limit=self._pci_registers[self._vppb_bind_table[vppb_index]].pci.memory_limit,
+            secondary_bus=pci_register.secondary_bus_number,
+            subordinate_bus=pci_register.subordinate_bus_number,
+            memory_base=pci_register.memory_base,
+            memory_limit=pci_register.memory_limit,
         )
         return info
 
@@ -220,8 +223,14 @@ class DownstreamPortDevice(CxlPortDevice):
 
     async def _run(self):
         logger.info(self._create_message("Starting"))
-        run_tasks = [create_task(self._cxl_io_manager[i].run()) for i in range(self._num_vppb)] + [create_task(self._cxl_mem_manager[i].run()) for i in range(self._num_vppb)]
-        wait_tasks = [create_task(self._cxl_io_manager[i].wait_for_ready()) for i in range(self._num_vppb)] + [create_task(self._cxl_mem_manager[i].wait_for_ready()) for i in range(self._num_vppb)]
+        run_tasks = (
+            [create_task(self._cxl_io_manager[i].run()) for i in range(self._num_vppb)] +
+            [create_task(self._cxl_mem_manager[i].run()) for i in range(self._num_vppb)]
+        )
+        wait_tasks = (
+            [create_task(self._cxl_io_manager[i].wait_for_ready()) for i in range(self._num_vppb)] +
+            [create_task(self._cxl_mem_manager[i].wait_for_ready()) for i in range(self._num_vppb)]
+        )
         await gather(*wait_tasks)
         await self._change_status_to_running()
         await gather(*run_tasks)
@@ -229,5 +238,8 @@ class DownstreamPortDevice(CxlPortDevice):
 
     async def _stop(self):
         logger.info(self._create_message("Stopping"))
-        tasks = [create_task(self._cxl_io_manager[i].stop()) for i in range(self._num_vppb)] + [create_task(self._cxl_mem_manager[i].stop()) for i in range(self._num_vppb)]
+        tasks = (
+            [create_task(self._cxl_io_manager[i].stop()) for i in range(self._num_vppb)] +
+            [create_task(self._cxl_mem_manager[i].stop()) for i in range(self._num_vppb)]
+        )
         await gather(*tasks)
