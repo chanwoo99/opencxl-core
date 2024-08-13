@@ -25,6 +25,7 @@ from opencxl.cxl.component.virtual_switch_manager import (
 )
 from opencxl.apps.accelerator import MyType2Accelerator
 from opencxl.apps.single_logical_device import SingleLogicalDevice
+from opencxl.cxl.device.config.logical_device import SingleLogicalDeviceConfig
 
 BASE_TEST_PORT = 9300
 
@@ -274,10 +275,10 @@ async def test_cxl_host_type3_ete():
         PortConfig(PORT_TYPE.DSP),
     ]
     sw_conn_manager = SwitchConnectionManager(port_configs, port=switch_port)
+    device_config = [SingleLogicalDeviceConfig("0",0,0,"0")]
     physical_port_manager = PhysicalPortManager(
-        switch_connection_manager=sw_conn_manager, port_configs=port_configs
+        switch_connection_manager=sw_conn_manager, port_configs=port_configs, sld_configs=device_config
     )
-
     switch_configs = [VirtualSwitchConfig(upstream_port_index=0, vppb_counts=1, initial_bounds=[1])]
     virtual_switch_manager = VirtualSwitchManager(
         switch_configs=switch_configs, physical_port_manager=physical_port_manager
@@ -352,10 +353,10 @@ async def test_cxl_host_type2_ete():
         PortConfig(PORT_TYPE.DSP),
     ]
     sw_conn_manager = SwitchConnectionManager(port_configs, port=switch_port)
+    device_config = [SingleLogicalDeviceConfig("0",0,0,"0")]
     physical_port_manager = PhysicalPortManager(
-        switch_connection_manager=sw_conn_manager, port_configs=port_configs
+        switch_connection_manager=sw_conn_manager, port_configs=port_configs, sld_configs=device_config
     )
-
     switch_configs = [VirtualSwitchConfig(upstream_port_index=0, vppb_counts=1, initial_bounds=[1])]
     virtual_switch_manager = VirtualSwitchManager(
         switch_configs=switch_configs, physical_port_manager=physical_port_manager
