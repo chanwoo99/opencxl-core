@@ -13,7 +13,7 @@ from opencxl.cxl.component.physical_port_manager import (
     PortConfig,
     PORT_TYPE,
     UpstreamPortDevice,
-    DownstreamPortDevice,
+    DownstreamPortSld,
 )
 from opencxl.cxl.component.switch_connection_manager import SwitchConnectionManager
 
@@ -43,7 +43,7 @@ def test_physical_port_manager_init(get_gold_std_reg_vals):
             reg_vals_expected = get_gold_std_reg_vals("USP")
             assert reg_vals == reg_vals_expected
         else:
-            assert isinstance(port_device, DownstreamPortDevice)
+            assert isinstance(port_device, DownstreamPortSld)
             reg_vals_expected = get_gold_std_reg_vals("DSP")
             assert reg_vals == reg_vals_expected
 

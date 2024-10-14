@@ -18,7 +18,7 @@ from opencxl.cxl.component.cxl_bridge_component import (
     CxlDownstreamPortComponent,
 )
 from opencxl.cxl.mmio import CombinedMmioRegister, CombinedMmioRegiterOptions
-from opencxl.cxl.device.port_device import CxlPortDevice
+from opencxl.cxl.component.virtual_switch.vppb import Vppb
 from opencxl.cxl.config_space.port import (
     CxlDownstreamPortConfigSpace,
     CxlDownstreamPortConfigSpaceOptions,
@@ -61,81 +61,17 @@ class EnumerationInfo:
     memory_limit: int
 
 
-class DownstreamPortSld(CxlPortDevice):
-    def __init__(
-        self,
-        transport_connection: CxlConnection,
-        port_index: int = 0,
-    ):
-        super().__init__(transport_connection, port_index)
+class DownstreamVppb(Vppb):
+    def __init__(self, vppb_index: int, vcs_id: int):
+        super().__init__()
+        self._vppb_index = vppb_index
+        self._vcs_id = vcs_id
 
-        self._pci_bridge_component = None
-        self._pci_registers = None
-        self._cxl_component = None
-
-        self._cxl_io_manager = CxlIoManager(
-            self._vppb_upstream_connection.mmio_fifo,
-            self._vppb_downstream_connection.mmio_fifo,
-            self._vppb_upstream_connection.cfg_fifo,
-            self._vppb_downstream_connection.cfg_fifo,
-            device_type=PCI_DEVICE_TYPE.DOWNSTREAM_BRIDGE,
-            init_callback=self._init_device,
-            label=self._get_label(),
-        )
-        self._cxl_mem_manager = CxlMemManager(
-            upstream_fifo=self._vppb_upstream_connection.cxl_mem_fifo,
-            downstream_fifo=self._vppb_downstream_connection.cxl_mem_fifo,
-            label=self._get_label(),
-        )
-        self._cxl_cache_manager = CxlCacheManager(
-            upstream_fifo=self._vppb_upstream_connection.cxl_cache_fifo,
-            downstream_fifo=self._vppb_downstream_connection.cxl_cache_fifo,
-            label=self._get_label(),
-        )
-
-    def _init_device(
-        self,
-        mmio_manager: MmioManager,
-        config_space_manager: ConfigSpaceManager,
-    ):
-        pci_identity = PciComponentIdentity(
-            vendor_id=EEUM_VID,
-            device_id=SW_DSP_DID,
-            base_class_code=PCI_CLASS.BRIDGE,
-            sub_class_coce=PCI_BRIDGE_SUBCLASS.PCI_BRIDGE,
-            programming_interface=0x00,
-            device_port_type=PCI_DEVICE_PORT_TYPE.DOWNSTREAM_PORT_OF_PCI_EXPRESS_SWITCH,
-        )
-        self._pci_bridge_component = PciBridgeComponent(
-            identity=pci_identity,
-            type=PCI_BRIDGE_TYPE.DOWNSTREAM_PORT,
-            mmio_manager=mmio_manager,
-            label=self._get_label(),
-        )
-
-
-        # Create MMIO register
-        cxl_component = CxlDownstreamPortComponent()
-        self._cxl_component = cxl_component
-        mmio_options = CombinedMmioRegiterOptions(cxl_component=cxl_component)
-        mmio_register = CombinedMmioRegister(options=mmio_options)
-        mmio_manager.set_bar_entries([BarEntry(mmio_register)])
-
-        # Create Config Space Register
-        pci_registers_options = CxlDownstreamPortConfigSpaceOptions(
-            pci_bridge_component=self._pci_bridge_component,
-            dvsec=DvsecConfigSpaceOptions(
-                device_type=CXL_DEVICE_TYPE.DSP,
-                register_locator=DvsecRegisterLocatorOptions(
-                    registers=mmio_register.get_dvsec_register_offsets()
-                ),
-            ),
-        )
-        self._pci_registers = CxlDownstreamPortConfigSpace(options=pci_registers_options)
-        config_space_manager.set_register(self._pci_registers)
 
     def _get_label(self) -> str:
-        return f"DSP{self._port_index}"
+        vcs_str = f"VCS{self._vcs_id}"
+        vppb_str = f"vPPB{self._vppb_index}(DSP)"
+        return f"{vcs_str}:{vppb_str}"
 
     def _create_message(self, message: str) -> str:
         message = f"[{self.__class__.__name__}:{self._get_label()}] {message}"
@@ -145,8 +81,6 @@ class DownstreamPortSld(CxlPortDevice):
         return self._cxl_io_manager.get_cfg_reg_vals()
 
     def set_vppb_index(self, vppb_index: int):
-        if self._is_dummy:
-            raise Exception("Dummy Downstream Port does not support updating the vPPB index")
         self._vppb_index = vppb_index
         self._pci_bridge_component.set_port_number(self._vppb_index)
 
@@ -154,8 +88,6 @@ class DownstreamPortSld(CxlPortDevice):
         return CXL_COMPONENT_TYPE.DSP
 
     def set_routing_table(self, routing_table: RoutingTable):
-        if self._is_dummy:
-            raise Exception("Dummy Downstream Port does not support updating the routing table")
         self._pci_bridge_component.set_routing_table(routing_table)
 
     def backup_enumeration_info(self) -> EnumerationInfo:

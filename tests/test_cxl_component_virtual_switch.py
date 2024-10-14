@@ -13,7 +13,7 @@ from opencxl.util.logger import logger
 from opencxl.cxl.component.cxl_connection import CxlConnection
 from opencxl.cxl.device.port_device import CxlPortDevice, CXL_COMPONENT_TYPE
 from opencxl.cxl.device.upstream_port_device import UpstreamPortDevice
-from opencxl.cxl.device.downstream_port_device import DownstreamPortDevice
+from opencxl.cxl.device.downstream_port_device import DownstreamPortSld
 from opencxl.cxl.device.root_port_device import (
     CxlRootPortDevice,
     MmioEnumerationInfo,
@@ -65,9 +65,9 @@ def create_vcs_and_rp() -> Tuple[CxlVirtualSwitch, List[CxlPortDevice], CxlRootP
     )
     usp_device = UpstreamPortDevice(transport_connection=usp_transport, port_index=0)
     dsp_devices = [
-        DownstreamPortDevice(transport_connection=CxlConnection(), port_index=1),
-        DownstreamPortDevice(transport_connection=CxlConnection(), port_index=2),
-        DownstreamPortDevice(transport_connection=CxlConnection(), port_index=3),
+        DownstreamPortSld(transport_connection=CxlConnection(), port_index=1),
+        DownstreamPortSld(transport_connection=CxlConnection(), port_index=2),
+        DownstreamPortSld(transport_connection=CxlConnection(), port_index=3),
     ]
     physical_ports: List[CxlPortDevice] = [usp_device] + dsp_devices
     vcs = CxlVirtualSwitch(
@@ -92,9 +92,9 @@ def test_virtual_switch_manager_init():
     initial_bounds = [1, 2, 3]
     physical_ports = [
         UpstreamPortDevice(transport_connection=CxlConnection(), port_index=0),
-        DownstreamPortDevice(transport_connection=CxlConnection(), port_index=1),
-        DownstreamPortDevice(transport_connection=CxlConnection(), port_index=2),
-        DownstreamPortDevice(transport_connection=CxlConnection(), port_index=3),
+        DownstreamPortSld(transport_connection=CxlConnection(), port_index=1),
+        DownstreamPortSld(transport_connection=CxlConnection(), port_index=2),
+        DownstreamPortSld(transport_connection=CxlConnection(), port_index=3),
     ]
 
     with pytest.raises(Exception, match="physical port 1 is not USP"):
@@ -134,9 +134,9 @@ async def test_virtual_switch_manager_run_and_stop():
     initial_bounds = [1, 2, -1]
     physical_ports = [
         UpstreamPortDevice(transport_connection=CxlConnection(), port_index=0),
-        DownstreamPortDevice(transport_connection=CxlConnection(), port_index=1),
-        DownstreamPortDevice(transport_connection=CxlConnection(), port_index=2),
-        DownstreamPortDevice(transport_connection=CxlConnection(), port_index=3),
+        DownstreamPortSld(transport_connection=CxlConnection(), port_index=1),
+        DownstreamPortSld(transport_connection=CxlConnection(), port_index=2),
+        DownstreamPortSld(transport_connection=CxlConnection(), port_index=3),
     ]
     vcs = CxlVirtualSwitch(
         id=vcs_id,
@@ -443,7 +443,7 @@ async def test_virtual_switch_manager_test_bind_and_unbind():
     cxl_devices = []
     for port_index in range(1, vppb_counts + 1):
         connection = CxlConnection()
-        dsp = DownstreamPortDevice(transport_connection=connection, port_index=port_index)
+        dsp = DownstreamPortSld(transport_connection=connection, port_index=port_index)
         dsp_devices.append(dsp)
         sld = CxlType3Device(
             transport_connection=connection,
@@ -546,7 +546,7 @@ async def test_virtual_switch_manager_test_cxl_mem():
     cxl_devices = []
     for port_index in range(1, vppb_counts + 1):
         connection = CxlConnection()
-        dsp = DownstreamPortDevice(transport_connection=connection, port_index=port_index)
+        dsp = DownstreamPortSld(transport_connection=connection, port_index=port_index)
         dsp_devices.append(dsp)
         sld = CxlType3Device(
             transport_connection=connection,

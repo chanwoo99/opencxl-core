@@ -17,6 +17,9 @@ from opencxl.cxl.component.cxl_connection import FifoPair
 from opencxl.cxl.device.upstream_port_device import UpstreamPortDevice
 from opencxl.cxl.component.virtual_switch.routing_table import RoutingTable
 from opencxl.cxl.component.virtual_switch.port_binder import PortBinder, BindSlot
+from opencxl.cxl.component.virtual_switch.vppb import Vppb
+from opencxl.cxl.component.virtual_switch.upstream_vppb import UpstreamVppb
+from opencxl.cxl.component.virtual_switch.downstream_vppb import DownstreamVppb
 from opencxl.cxl.transport.transaction import (
     BasePacket,
     CxlCacheD2HReqPacket,
@@ -86,14 +89,14 @@ class CxlIoRouter(RunnableComponent):
         self,
         vcs_id: int,
         routing_table: RoutingTable,
-        usp_device: UpstreamPortDevice,
+        upstream_vppb: UpstreamVppb,
         port_binder: PortBinder,
     ):
         super().__init__()
         self._config_space_router = ConfigSpaceRouter(
-            vcs_id, routing_table, usp_device, port_binder
+            vcs_id, routing_table, upstream_vppb, port_binder
         )
-        self._mmio_router = MmioRouter(vcs_id, routing_table, usp_device, port_binder)
+        self._mmio_router = MmioRouter(vcs_id, routing_table, upstream_vppb, port_binder)
 
     async def _run(self):
         run_tasks = [
@@ -121,16 +124,16 @@ class MmioRouter(CxlRouter):
         self,
         vcs_id: int,
         routing_table: RoutingTable,
-        usp_device: UpstreamPortDevice,
+        upstream_vppb: UpstreamVppb,
         port_binder: PortBinder,
     ):
-        usp_connection = usp_device.get_downstream_connection()
+        upstream_vppb_connection = upstream_vppb.get_downstream_connection()
 
         super().__init__(vcs_id, routing_table)
-        self._upstream_connection_fifo = usp_connection.mmio_fifo
+        self._upstream_connection_fifo = upstream_vppb_connection.mmio_fifo
         self._downstream_connections = port_binder.get_bind_slots()
         self._downstream_connection_fifos = [
-            self._downstream_connections[i].vppb_connection.mmio_fifo
+            self._downstream_connections[i].vppb.get_upstream_connection().mmio_fifo
             for i in range(len(self._downstream_connections))
         ]
 
@@ -164,11 +167,11 @@ class MmioRouter(CxlRouter):
 
             downstream_connection_fifo = self._downstream_connections[
                 target_port
-            ].vppb_connection.mmio_fifo
+            ].vppb.get_upstream_connection().mmio_fifo
             await downstream_connection_fifo.host_to_target.put(packet)
 
     async def _process_target_to_host_packets(self, downstream_connection_bind_slot: BindSlot):
-        downstream_connection_fifo = downstream_connection_bind_slot.vppb_connection.mmio_fifo
+        downstream_connection_fifo = downstream_connection_bind_slot.vppb.get_upstream_connection().mmio_fifo
         while True:
             packet = await downstream_connection_fifo.target_to_host.get()
             if packet is None:
@@ -191,15 +194,15 @@ class ConfigSpaceRouter(CxlRouter):
         self,
         vcs_id: int,
         routing_table: RoutingTable,
-        usp_device: UpstreamPortDevice,
+        upstream_vppb: UpstreamVppb,
         port_binder: PortBinder,
     ):
-        usp_connection = usp_device.get_downstream_connection()
+        upstream_vppb_connection = upstream_vppb.get_downstream_connection()
         super().__init__(vcs_id, routing_table)
-        self._upstream_connection_fifo = usp_connection.cfg_fifo
+        self._upstream_connection_fifo = upstream_vppb_connection.cfg_fifo
         self._downstream_connections = port_binder.get_bind_slots()
         self._downstream_connection_fifos = [
-            self._downstream_connections[i].vppb_connection.cfg_fifo
+            self._downstream_connections[i].vppb.get_upstream_connection().cfg_fifo
             for i in range(len(self._downstream_connections))
         ]
 
@@ -243,11 +246,11 @@ class ConfigSpaceRouter(CxlRouter):
 
             downstream_connection_fifo = self._downstream_connections[
                 target_port
-            ].vppb_connection.cfg_fifo
+            ].vppb.get_upstream_connection().cfg_fifo
             await downstream_connection_fifo.host_to_target.put(packet)
 
     async def _process_target_to_host_packets(self, downstream_connection_bind_slot: BindSlot):
-        downstream_connection_fifo = downstream_connection_bind_slot.vppb_connection.cfg_fifo
+        downstream_connection_fifo = downstream_connection_bind_slot.vppb.get_upstream_connection().cfg_fifo
         while True:
             packet = await downstream_connection_fifo.target_to_host.get()
             if packet is None:
@@ -264,13 +267,13 @@ class CxlMemRouter(CxlRouter):
         self,
         vcs_id: int,
         routing_table: RoutingTable,
-        usp_device: UpstreamPortDevice,
+        upstream_vppb: UpstreamVppb,
         port_binder: PortBinder,
         bi_enable_override_for_test: Optional[int] = None,
         bi_forward_override_for_test: Optional[int] = None,
     ):
-        usp_connection = usp_device.get_downstream_connection()
-        self._usp_device = usp_device
+        upstream_vppb_connection = upstream_vppb.get_downstream_connection()
+        self._upstream_vppb = upstream_vppb
         self._port_binder = port_binder
 
         # For testing purposes
@@ -278,10 +281,10 @@ class CxlMemRouter(CxlRouter):
         self._bi_forward_override_for_test = bi_forward_override_for_test
 
         super().__init__(vcs_id, routing_table)
-        self._upstream_connection_fifo = usp_connection.cxl_mem_fifo
+        self._upstream_connection_fifo = upstream_vppb_connection.cxl_mem_fifo
         self._downstream_connections = port_binder.get_bind_slots()
         self._downstream_connection_fifos = [
-            self._downstream_connections[i].vppb_connection.cxl_mem_fifo
+            self._downstream_connections[i].vppb.get_upstream_connection().cxl_mem_fifo
             for i in range(len(self._downstream_connections))
         ]
 
@@ -307,8 +310,8 @@ class CxlMemRouter(CxlRouter):
                     CxlMemM2SBIRspPacket, cxl_mem_base_packet
                 )
                 for i, bind_slot in enumerate(self._downstream_connections):
-                    dsp_device = bind_slot.dsp
-                    bus = dsp_device.get_secondary_bus_number()
+                    downstream_vppb = bind_slot.vppb
+                    bus = downstream_vppb.get_secondary_bus_number()
                     if bus == cxl_mem_bi_packet.m2sbirsp_header.bi_id:
                         target_port = i
                         break
@@ -322,15 +325,15 @@ class CxlMemRouter(CxlRouter):
                 raise Exception("target_port is out of bound")
             downstream_connection_fifo = self._downstream_connections[
                 target_port
-            ].vppb_connection.cxl_mem_fifo
+            ].vppb.get_upstream_connection().cxl_mem_fifo
             await downstream_connection_fifo.host_to_target.put(packet)
 
     async def _process_target_to_host_packets(self, downstream_connection_bind_slot: BindSlot):
-        downstream_connection_fifo = downstream_connection_bind_slot.vppb_connection.cxl_mem_fifo
-        dsp_device = downstream_connection_bind_slot.dsp
+        downstream_connection_fifo = downstream_connection_bind_slot.vppb.get_upstream_connection().cxl_mem_fifo
+        downstream_vppb = downstream_connection_bind_slot.vppb
 
-        dsp_component = dsp_device.get_cxl_component()
-        usp_component = self._usp_device.get_cxl_component()
+        downstream_vppb_component = downstream_vppb.get_cxl_component()
+        upstream_vppb_component = self._upstream_vppb.get_cxl_component()
         bi_enable = self._bi_enable_override_for_test
         bi_forward = self._bi_forward_override_for_test
 
@@ -342,8 +345,8 @@ class CxlMemRouter(CxlRouter):
             cxl_mem_base_packet: CxlMemBasePacket = cast(CxlMemBasePacket, packet)
             if cxl_mem_base_packet.is_s2mbisnp():
                 # NOTE: Following vars might be uninitialized before while
-                bi_id = dsp_device.get_secondary_bus_number()
-                bi_decoder_options = dsp_component.get_bi_decoder_options()
+                bi_id = downstream_vppb.get_secondary_bus_number()
+                bi_decoder_options = downstream_vppb_component.get_bi_decoder_options()
 
                 if self._bi_enable_override_for_test is None:
                     bi_enable = bi_decoder_options["control_options"]["bi_enable"]
@@ -359,7 +362,7 @@ class CxlMemRouter(CxlRouter):
                 if bi_enable == 0 and bi_forward == 1:
                     await self._upstream_connection_fifo.target_to_host.put(packet)
                 elif bi_enable == 1 and bi_forward == 0:
-                    hdm_decoder_manager = usp_component.get_hdm_decoder_manager()
+                    hdm_decoder_manager = upstream_vppb_component.get_hdm_decoder_manager()
                     if hdm_decoder_manager.is_bi_capable():
                         cxl_mem_bi_packet.s2mbisnp_header.bi_id = bi_id
                         await self._upstream_connection_fifo.target_to_host.put(packet)
@@ -374,18 +377,18 @@ class CxlCacheRouter(CxlRouter):
         self,
         vcs_id: int,
         routing_table: RoutingTable,
-        usp_device: UpstreamPortDevice,
+        upstream_vppb: UpstreamVppb,
         port_binder: PortBinder,
     ):
         super().__init__(vcs_id, routing_table)
-        usp_connection = usp_device.get_downstream_connection()
-        self._usp_device = usp_device
+        upstream_vppb_connection = upstream_vppb.get_downstream_connection()
+        self._upstream_vppb = upstream_vppb
         self._port_binder = port_binder
 
-        self._upstream_connection_fifo = usp_connection.cxl_cache_fifo
+        self._upstream_connection_fifo = upstream_vppb_connection.cxl_cache_fifo
         self._downstream_connections = port_binder.get_bind_slots()
         self._downstream_connection_fifos = [
-            self._downstream_connections[i].vppb_connection.cxl_cache_fifo
+            self._downstream_connections[i].vppb.get_upstream_connection().cxl_cache_fifo
             for i in range(len(self._downstream_connections))
         ]
 
@@ -408,7 +411,7 @@ class CxlCacheRouter(CxlRouter):
             else:
                 raise Exception("Received unexpected packet")
 
-            usp_component = self._usp_device.get_cxl_component()
+            upstream_vppb_component = self._upstream_vppb.get_cxl_component()
 
             # HACK: this is a placeholder that only works with structures having a
             # fixed number of targets. A MUCH better way of doing this is through an
@@ -417,10 +420,10 @@ class CxlCacheRouter(CxlRouter):
 
             target_fld_name = f"target{cache_id}_options"
 
-            if target_fld_name not in usp_component.get_cache_route_table_options():
+            if target_fld_name not in upstream_vppb_component.get_cache_route_table_options():
                 logger.warning(self._create_message("Received unroutable CXL.cache packet"))
                 continue
-            target_port = usp_component.get_cache_route_table_options()[target_fld_name][
+            target_port = upstream_vppb_component.get_cache_route_table_options()[target_fld_name][
                 "port_number"
             ]
             if target_port is None:
@@ -432,14 +435,14 @@ class CxlCacheRouter(CxlRouter):
                 raise Exception("target_port is out of bound")
             downstream_connection_fifo = self._downstream_connections[
                 target_port
-            ].vppb_connection.cxl_cache_fifo
+            ].vppb.get_upstream_connection().cxl_cache_fifo
             await downstream_connection_fifo.host_to_target.put(packet)
 
     async def _process_target_to_host_packets(self, downstream_connection_bind_slot: BindSlot):
-        downstream_connection_fifo = downstream_connection_bind_slot.vppb_connection.cxl_cache_fifo
+        downstream_connection_fifo = downstream_connection_bind_slot.vppb.get_upstream_connection().cxl_cache_fifo
 
-        dsp_device = downstream_connection_bind_slot.dsp
-        dsp_component = dsp_device.get_cxl_component()
+        downstream_vppb = downstream_connection_bind_slot.vppb
+        downstream_vppb_component = downstream_vppb.get_cxl_component()
 
         while True:
             packet = await downstream_connection_fifo.target_to_host.get()
@@ -450,7 +453,7 @@ class CxlCacheRouter(CxlRouter):
             # See CXL 3.0 specification: Section 9.15.2
             if cxl_cache_base_packet.is_d2hreq():
                 cxl_cache_packet = cast(CxlCacheD2HReqPacket, packet)
-                cache_id_decoder_opt_ctl = dsp_component.get_cache_decoder_options()[
+                cache_id_decoder_opt_ctl = downstream_vppb_component.get_cache_decoder_options()[
                     "control_options"
                 ]
                 assign, fwd = (
