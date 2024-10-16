@@ -79,9 +79,9 @@ class Vppb(RunnableComponent):
         self._pci_bridge_component = None
         self._pci_registers = None
         self._cxl_component = None
-
-        self._upstream_connection = None
-        self._downstream_connection = None
+        #Initailize with dummy cxlconnection
+        self._upstream_connection = CxlConnection()
+        self._downstream_connection = CxlConnection()
 
         super().__init__()
 
@@ -114,8 +114,8 @@ class Vppb(RunnableComponent):
         self._pci_bridge_component = None
         self._pci_registers = None
         self._cxl_component = None
-        self._upstream_connection = None
-        self._downstream_connection = None
+        self._upstream_connection = CxlConnection()
+        self._downstream_connection = CxlConnection()
      
 
     @abstractmethod

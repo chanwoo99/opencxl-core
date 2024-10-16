@@ -177,9 +177,8 @@ class CxlVirtualSwitch(RunnableComponent):
 
     async def unbind_vppb(self, vppb_index: int):
         logger.info(self._create_message(f"Started unbinding physical port from vPPB {vppb_index}"))
-        dummy_device = self._dummy_dsp_devices[vppb_index]
         await self._call_event_handler(vppb_index, PPB_BINDING_STATUS.BIND_OR_UNBIND_IN_PROGRESS)
-        await self._port_binder.unbind_vppb(dummy_device, vppb_index)
+        await self._port_binder.unbind_vppb(vppb_index)
         logger.info(
             self._create_message(f"Succcessfully unbound physical port from vPPB {vppb_index}")
         )

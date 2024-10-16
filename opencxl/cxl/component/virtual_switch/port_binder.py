@@ -129,8 +129,6 @@ class PortBinder(RunnableComponent):
         # TODO: Get config space from dummy and store in PPB
         if bind_slot.processor is not None:
             await bind_slot.processor.stop()
-            info = bind_slot.vppb.backup_enumeration_info()
-            self._vppbs[vppb_index].restore_enumeration_info(info)
 
         bind_slot.dsp = dsp_device
         bind_slot.vppb = self._vppbs[vppb_index]
@@ -143,7 +141,7 @@ class PortBinder(RunnableComponent):
         bind_slot.status = BIND_STATUS.BOUND
 
     # TODO: vppb -- unbind need to be fiexed
-    async def unbind_vppb(self, dsp_device: DownstreamPortSld, vppb_index: int):
+    async def unbind_vppb(self, vppb_index: int):
         if vppb_index >= len(self._bind_slots) or vppb_index < 0:
             raise Exception("vppb_index is out of bound")
 
@@ -154,17 +152,6 @@ class PortBinder(RunnableComponent):
         # TODO: Get config space from PPB and store in dummy
         if bind_slot.processor is not None:
             await bind_slot.processor.stop()
-            info = bind_slot.vppb.backup_enumeration_info()
-            self._vppbs[vppb_index].restore_enumeration_info(info)
-
-        bind_slot.dsp = dsp_device
-        bind_slot.vppb = self._vppbs[vppb_index]
-        downstream_connection = bind_slot.vppb.get_downstream_connection()
-        upstream_connection = dsp_device.get_transport_connection()
-        bind_slot.processor = BindProcessor(
-            self._vcs_id, vppb_index, downstream_connection, upstream_connection
-        )
-        self._async_gatherer.add_task(bind_slot.processor.run())
         bind_slot.status = BIND_STATUS.UNBOUND
 
     def get_bind_status(self, vppb_index: int) -> BIND_STATUS:

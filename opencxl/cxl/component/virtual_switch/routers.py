@@ -16,7 +16,7 @@ from opencxl.util.number import tlptoh16
 from opencxl.cxl.component.cxl_connection import FifoPair
 from opencxl.cxl.device.upstream_port_device import UpstreamPortDevice
 from opencxl.cxl.component.virtual_switch.routing_table import RoutingTable
-from opencxl.cxl.component.virtual_switch.port_binder import PortBinder, BindSlot
+from opencxl.cxl.component.virtual_switch.port_binder import PortBinder, BindSlot, BIND_STATUS
 from opencxl.cxl.component.virtual_switch.vppb import Vppb
 from opencxl.cxl.component.virtual_switch.upstream_vppb import UpstreamVppb
 from opencxl.cxl.component.virtual_switch.downstream_vppb import DownstreamVppb
@@ -132,10 +132,12 @@ class MmioRouter(CxlRouter):
         super().__init__(vcs_id, routing_table)
         self._upstream_connection_fifo = upstream_vppb_connection.mmio_fifo
         self._downstream_connections = port_binder.get_bind_slots()
-        self._downstream_connection_fifos = [
-            self._downstream_connections[i].vppb.get_upstream_connection().mmio_fifo
-            for i in range(len(self._downstream_connections))
-        ]
+        self._downstream_connection_fifos = []
+        for bind_slot in self._downstream_connections:
+            if bind_slot.status == BIND_STATUS.BOUND:
+                self._downstream_connection_fifos.append(
+                    bind_slot.vppb.get_upstream_connection().mmio_fifo
+                )
 
     async def _process_host_to_target_packets(self):
         while True:
@@ -201,11 +203,13 @@ class ConfigSpaceRouter(CxlRouter):
         super().__init__(vcs_id, routing_table)
         self._upstream_connection_fifo = upstream_vppb_connection.cfg_fifo
         self._downstream_connections = port_binder.get_bind_slots()
-        self._downstream_connection_fifos = [
-            self._downstream_connections[i].vppb.get_upstream_connection().cfg_fifo
-            for i in range(len(self._downstream_connections))
-        ]
-
+        self._downstream_connection_fifos = []
+        for bind_slot in self._downstream_connections:
+            if bind_slot.status == BIND_STATUS.BOUND:
+                self._downstream_connection_fifos.append(
+                    bind_slot.vppb.get_upstream_connection().cfg_fifo
+                )
+                
     async def _process_host_to_target_packets(self):
         while True:
             packet = await self._upstream_connection_fifo.host_to_target.get()
@@ -283,10 +287,12 @@ class CxlMemRouter(CxlRouter):
         super().__init__(vcs_id, routing_table)
         self._upstream_connection_fifo = upstream_vppb_connection.cxl_mem_fifo
         self._downstream_connections = port_binder.get_bind_slots()
-        self._downstream_connection_fifos = [
-            self._downstream_connections[i].vppb.get_upstream_connection().cxl_mem_fifo
-            for i in range(len(self._downstream_connections))
-        ]
+        self._downstream_connection_fifos = []
+        for bind_slot in self._downstream_connections:
+            if bind_slot.status == BIND_STATUS.BOUND:
+                self._downstream_connection_fifos.append(
+                    bind_slot.vppb.get_upstream_connection().cxl_mem_fifo
+                )
 
     async def _process_host_to_target_packets(self):
         while True:
@@ -387,10 +393,12 @@ class CxlCacheRouter(CxlRouter):
 
         self._upstream_connection_fifo = upstream_vppb_connection.cxl_cache_fifo
         self._downstream_connections = port_binder.get_bind_slots()
-        self._downstream_connection_fifos = [
-            self._downstream_connections[i].vppb.get_upstream_connection().cxl_cache_fifo
-            for i in range(len(self._downstream_connections))
-        ]
+        self._downstream_connection_fifos = []
+        for bind_slot in self._downstream_connections:
+            if bind_slot.status == BIND_STATUS.BOUND:
+                self._downstream_connection_fifos.append(
+                    bind_slot.vppb.get_upstream_connection().cxl_cache_fifo
+                )
 
     async def _process_host_to_target_packets(self):
         while True:
