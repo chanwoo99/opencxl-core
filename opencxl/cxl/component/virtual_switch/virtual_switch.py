@@ -13,17 +13,19 @@ from typing import List, Optional, cast, Callable, Coroutine, Any
 from opencxl.util.logger import logger
 from opencxl.cxl.component.cxl_connection import CxlConnection
 from opencxl.cxl.component.common import CXL_COMPONENT_TYPE
-from opencxl.cxl.component.virtual_switch.port_binder import PortBinder, BIND_STATUS
+from opencxl.cxl.component.virtual_switch.port_binder import PortBinder, BIND_STATUS, BindProcessor
 from opencxl.cxl.component.virtual_switch.routers import CxlMemRouter, CxlIoRouter, CxlCacheRouter
 from opencxl.cxl.component.virtual_switch.routing_table import RoutingTable
 from opencxl.cxl.component.virtual_switch.vppb import Vppb
 from opencxl.cxl.component.virtual_switch.upstream_vppb import UpstreamVppb
 from opencxl.cxl.component.virtual_switch.downstream_vppb import DownstreamVppb
 
+
 from opencxl.cxl.device.port_device import CxlPortDevice
 from opencxl.cxl.device.upstream_port_device import UpstreamPortDevice
 from opencxl.cxl.device.downstream_port_device import DownstreamPortSld, DummyConfig
 from opencxl.pci.device.pci_device import PciDevice
+from opencxl.cxl.device.pci_to_pci_bridge_device import PPBDevice
 from opencxl.util.component import RunnableComponent
 
 

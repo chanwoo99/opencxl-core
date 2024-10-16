@@ -133,7 +133,8 @@ class PortBinder(RunnableComponent):
         bind_slot.dsp = dsp_device
         bind_slot.vppb = self._vppbs[vppb_index]
         downstream_connection = bind_slot.vppb.get_downstream_connection()
-        upstream_connection = dsp_device.get_transport_connection()
+        #upstream_connection = dsp_device.get_transport_connection()
+        upstream_connection = dsp_device.get_ppb_device().get_upstream_connection()
         bind_slot.processor = BindProcessor(
             self._vcs_id, vppb_index, downstream_connection, upstream_connection
         )

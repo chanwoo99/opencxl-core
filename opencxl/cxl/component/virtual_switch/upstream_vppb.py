@@ -27,6 +27,7 @@ from opencxl.cxl.component.cxl_bridge_component import (
     CxlUpstreamPortComponent,
     HDM_DECODER_COUNT,
 )
+from opencxl.cxl.device.pci_to_pci_bridge_device import PPBDevice
 from opencxl.cxl.component.virtual_switch.routing_table import RoutingTable
 from opencxl.cxl.component.cxl_mem_manager import CxlMemManager
 from opencxl.cxl.component.cxl_io_manager import CxlIoManager
