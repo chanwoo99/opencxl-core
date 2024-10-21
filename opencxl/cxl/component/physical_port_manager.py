@@ -12,7 +12,7 @@ from typing import List, Dict, Optional, cast
 from opencxl.cxl.device.port_device import CxlPortDevice
 from opencxl.cxl.device.upstream_port_device import UpstreamPortDevice
 from opencxl.cxl.device.pci_to_pci_bridge_device import PPBDevice
-from opencxl.cxl.device.downstream_port_device import DownstreamPortSld
+from opencxl.cxl.device.downstream_port_device import DownstreamPortDevice
 from opencxl.cxl.device.config.logical_device import SingleLogicalDeviceConfig
 from opencxl.cxl.component.switch_connection_manager import SwitchConnectionManager
 from opencxl.cxl.component.virtual_switch.port_binder import BindProcessor
@@ -59,7 +59,7 @@ class PhysicalPortManager(RunnableComponent):
                 self._port_devices.append(UpstreamPortDevice(transport_connection, port_index))
                 self._ppb_binds.append(None)
             else:
-                physical_port = DownstreamPortSld(transport_connection, port_index)
+                physical_port = DownstreamPortDevice(transport_connection, port_index)
                 ppb = PPBDevice(port_index)
                 self._port_devices.append(physical_port)
                 self._ppb_devices.append(ppb)
@@ -159,5 +159,6 @@ class PhysicalPortManager(RunnableComponent):
         for ppb_device in self._ppb_devices:
             tasks.append(create_task(ppb_device.stop()))
         for ppb_bind in self._ppb_binds:
-            tasks.append(create_task(ppb_bind.stop()))
+            if ppb_bind is not None:
+                tasks.append(create_task(ppb_bind.stop()))
         await gather(*tasks)

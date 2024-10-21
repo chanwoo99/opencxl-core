@@ -18,7 +18,7 @@ from opencxl.util.unaligned_bit_structure import (
     FIELD_ATTR,
 )
 from opencxl.cxl.device.port_device import CxlPortDevice
-from opencxl.cxl.device.downstream_port_device import DownstreamPortSld
+from opencxl.cxl.device.downstream_port_device import DownstreamPortDevice
 from opencxl.cxl.device.upstream_port_device import UpstreamPortDevice
 
 from opencxl.cxl.component.virtual_switch.routing_table import RoutingTable
@@ -94,7 +94,7 @@ class Vppb(RunnableComponent):
     def bind_to_physical_port(self, physical_port: CxlPortDevice):
 
         if physical_port.get_device_type() == CXL_COMPONENT_TYPE.DSP:
-            physical_port = cast(DownstreamPortSld, physical_port)
+            physical_port = cast(DownstreamPortDevice, physical_port)
         else:
             physical_port = cast(UpstreamPortDevice, physical_port)
 

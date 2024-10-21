@@ -23,7 +23,7 @@ from opencxl.cxl.component.virtual_switch.downstream_vppb import DownstreamVppb
 
 from opencxl.cxl.device.port_device import CxlPortDevice
 from opencxl.cxl.device.upstream_port_device import UpstreamPortDevice
-from opencxl.cxl.device.downstream_port_device import DownstreamPortSld, DummyConfig
+from opencxl.cxl.device.downstream_port_device import DownstreamPortDevice, DummyConfig
 from opencxl.pci.device.pci_device import PciDevice
 from opencxl.cxl.device.pci_to_pci_bridge_device import PPBDevice
 from opencxl.util.component import RunnableComponent
@@ -86,6 +86,8 @@ class CxlVirtualSwitch(RunnableComponent):
         #self._vppb_connections = [CxlConnection() for _ in range(vppb_counts)]
         self._upstream_vppb = UpstreamVppb(upstream_port_index)
         self._upstream_vppb.bind_to_physical_port(self._physical_ports[upstream_port_index])
+        if self._physical_ports[upstream_port_index].get_device_type() != CXL_COMPONENT_TYPE.USP:
+            raise Exception(f"physical port {upstream_port_index} is not USP")
         self._downstream_vppbs = [DownstreamVppb(idx, id) for idx in range(vppb_counts)]
 
         self._upstream_vppb.set_routing_table(self._routing_table)
@@ -157,12 +159,12 @@ class CxlVirtualSwitch(RunnableComponent):
 
         port_device = self._physical_ports[port_index]
         vppb = self._downstream_vppbs[vppb_index]
-        if vppb.get_device_type() != CXL_COMPONENT_TYPE.DSP:
+        if port_device.get_device_type() != CXL_COMPONENT_TYPE.DSP:
             raise Exception(f"physical port {port_index} is not DSP")
         logger.info(
             self._create_message(f"Started Binding physical port {port_index} to vPPB {vppb_index}")
         )
-        dsp_device = cast(DownstreamPortSld, port_device)
+        dsp_device = cast(DownstreamPortDevice, port_device)
 
         vppb.bind_to_physical_port(dsp_device)
 
@@ -186,7 +188,7 @@ class CxlVirtualSwitch(RunnableComponent):
         )
         await self._call_event_handler(vppb_index, PPB_BINDING_STATUS.UNBOUND)
         # need to be fixed
-        self._downstream_vppbs[vppb_index].unbind_from_physical_port()
+        await self._downstream_vppbs[vppb_index].unbind_from_physical_port()
 
     async def _call_event_handler(self, vppb_id: int, binding_status: PPB_BINDING_STATUS):
         if not self._event_handler:

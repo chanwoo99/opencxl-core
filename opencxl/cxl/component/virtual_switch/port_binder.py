@@ -14,7 +14,7 @@ from opencxl.cxl.component.cxl_connection import CxlConnection
 from opencxl.cxl.component.virtual_switch.vppb import Vppb
 from opencxl.cxl.component.virtual_switch.upstream_vppb import UpstreamVppb
 from opencxl.cxl.component.virtual_switch.downstream_vppb import DownstreamVppb
-from opencxl.cxl.device.downstream_port_device import DownstreamPortSld
+from opencxl.cxl.device.downstream_port_device import DownstreamPortDevice
 from opencxl.util.async_gatherer import AsyncGatherer
 from opencxl.util.component import RunnableComponent
 
@@ -98,7 +98,7 @@ class BindSlot:
     vppb: Vppb
     status: BIND_STATUS = BIND_STATUS.INIT
     processor: Optional[BindProcessor] = None
-    dsp: Optional[DownstreamPortSld] = None
+    dsp: Optional[DownstreamPortDevice] = None
 
 
 class PortBinder(RunnableComponent):
@@ -114,11 +114,16 @@ class PortBinder(RunnableComponent):
             )
             self._bind_slots.append(bind_slot)
 
+        self._dummy = BindProcessor(
+            self._vcs_id, 0, CxlConnection(),CxlConnection()
+        )
+        self._async_gatherer.add_task(self._dummy.run())
+
     def _create_message(self, message):
         message = f"[{self.__class__.__name__}:VCS{self._vcs_id}] {message}"
         return message
 
-    async def bind_vppb(self, dsp_device: DownstreamPortSld, vppb_index: int):
+    async def bind_vppb(self, dsp_device: DownstreamPortDevice, vppb_index: int):
         if vppb_index >= len(self._bind_slots) or vppb_index < 0:
             raise Exception("vppb_index is out of bound")
 
@@ -189,4 +194,5 @@ class PortBinder(RunnableComponent):
         for slot in self._bind_slots:
             if slot.processor is not None:
                 tasks.append(create_task(slot.processor.stop()))
+        tasks.append(create_task(self._dummy.stop()))
         await gather(*tasks)

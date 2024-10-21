@@ -134,10 +134,9 @@ class MmioRouter(CxlRouter):
         self._downstream_connections = port_binder.get_bind_slots()
         self._downstream_connection_fifos = []
         for bind_slot in self._downstream_connections:
-            if bind_slot.status == BIND_STATUS.BOUND:
-                self._downstream_connection_fifos.append(
-                    bind_slot.vppb.get_upstream_connection().mmio_fifo
-                )
+            self._downstream_connection_fifos.append(
+                bind_slot.vppb.get_upstream_connection().mmio_fifo
+            )
 
     async def _process_host_to_target_packets(self):
         while True:
@@ -205,10 +204,9 @@ class ConfigSpaceRouter(CxlRouter):
         self._downstream_connections = port_binder.get_bind_slots()
         self._downstream_connection_fifos = []
         for bind_slot in self._downstream_connections:
-            if bind_slot.status == BIND_STATUS.BOUND:
-                self._downstream_connection_fifos.append(
-                    bind_slot.vppb.get_upstream_connection().cfg_fifo
-                )
+            self._downstream_connection_fifos.append(
+                bind_slot.vppb.get_upstream_connection().cfg_fifo
+            )
                 
     async def _process_host_to_target_packets(self):
         while True:
@@ -289,10 +287,9 @@ class CxlMemRouter(CxlRouter):
         self._downstream_connections = port_binder.get_bind_slots()
         self._downstream_connection_fifos = []
         for bind_slot in self._downstream_connections:
-            if bind_slot.status == BIND_STATUS.BOUND:
-                self._downstream_connection_fifos.append(
-                    bind_slot.vppb.get_upstream_connection().cxl_mem_fifo
-                )
+            self._downstream_connection_fifos.append(
+                bind_slot.vppb.get_upstream_connection().cxl_mem_fifo
+            )
 
     async def _process_host_to_target_packets(self):
         while True:
@@ -395,10 +392,9 @@ class CxlCacheRouter(CxlRouter):
         self._downstream_connections = port_binder.get_bind_slots()
         self._downstream_connection_fifos = []
         for bind_slot in self._downstream_connections:
-            if bind_slot.status == BIND_STATUS.BOUND:
-                self._downstream_connection_fifos.append(
-                    bind_slot.vppb.get_upstream_connection().cxl_cache_fifo
-                )
+            self._downstream_connection_fifos.append(
+                bind_slot.vppb.get_upstream_connection().cxl_cache_fifo
+            )
 
     async def _process_host_to_target_packets(self):
         while True:
