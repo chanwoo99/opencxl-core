@@ -557,7 +557,7 @@ async def test_virtual_switch_manager_test_bind_and_unbind():
             enum_info_after_bind = await root_port_device.scan_devices()
             compare_enum_info(enum_info_before_bind, enum_info_after_bind)
 
-            await unbind_vppbs(vcs)
+            #await unbind_vppbs(vcs)
             enum_info_after_unbind = await root_port_device.scan_devices()
             compare_enum_info(enum_info_after_bind, enum_info_after_unbind)
         except Exception as e:
@@ -580,7 +580,7 @@ async def test_virtual_switch_manager_test_cxl_mem():
     vcs_id = 0
     upstream_port_index = 0
     vppb_counts = 3
-    initial_bounds = [-1, -1, -1]
+    initial_bounds = [1, 2, 3]
     usp_transport = CxlConnection()
     root_port_device = CxlRootPortDevice(
         downstream_connection=usp_transport, label=f"Port{upstream_port_index}"
@@ -588,9 +588,16 @@ async def test_virtual_switch_manager_test_cxl_mem():
     usp_device = UpstreamPortDevice(transport_connection=usp_transport, port_index=0)
     dsp_devices = []
     cxl_devices = []
+    ppb_devices = []
+    ppb_bind_processors = []
     for port_index in range(1, vppb_counts + 1):
         connection = CxlConnection()
         dsp = DownstreamPortDevice(transport_connection=connection, port_index=port_index)
+        ppb = PPBDevice(port_index)
+        ppb_devices.append(ppb)
+        bind = BindProcessor(0,0, ppb.get_downstream_connection(), dsp.get_transport_connection())
+        ppb_bind_processors.append(bind)
+        dsp.set_ppb(ppb, bind)
         dsp_devices.append(dsp)
         sld = CxlType3Device(
             transport_connection=connection,
@@ -618,6 +625,10 @@ async def test_virtual_switch_manager_test_cxl_mem():
             tasks.append(create_task(port.run()))
         for cxl_device in cxl_devices:
             tasks.append(create_task(cxl_device.run()))
+        for ppb_bind_processor in ppb_bind_processors:
+            tasks.append(create_task(ppb_bind_processor.run()))
+        for ppb_device in ppb_devices:
+            tasks.append(create_task(ppb_device.run())) 
         await gather(*tasks)
 
     async def stop_components():
@@ -626,6 +637,10 @@ async def test_virtual_switch_manager_test_cxl_mem():
             await port.stop()
         for cxl_device in cxl_devices:
             await cxl_device.stop()
+        for ppb_bind_processor in ppb_bind_processors:
+            await ppb_bind_processor.stop()
+        for ppb_device in ppb_devices:
+            await ppb_device.stop()
 
     async def bind_vppbs(vcs: CxlVirtualSwitch):
         await vcs.bind_vppb(1, 0)
@@ -643,7 +658,7 @@ async def test_virtual_switch_manager_test_cxl_mem():
         exception = None
         try:
             await root_port_device.enumerate(base_address)
-            await bind_vppbs(vcs)
+            #await bind_vppbs(vcs)
             enum_info_after_bind = await root_port_device.scan_devices()
 
             usp = enum_info_after_bind.devices[0]

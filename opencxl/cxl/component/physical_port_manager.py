@@ -88,8 +88,6 @@ class PhysicalPortManager(RunnableComponent):
     def get_ppb_binds(self) -> List[BindProcessor]:
         return self._ppb_binds
     
-    def get_ppb_devices(self) -> List[PPBDevice]:
-        return self._ppb_devices
 
 
     def get_usp_hdm_decoder_count(self) -> int:
