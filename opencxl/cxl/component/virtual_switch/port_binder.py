@@ -117,13 +117,16 @@ class PortBinder(RunnableComponent):
         self._dummy = BindProcessor(
             self._vcs_id, 0, CxlConnection(),CxlConnection()
         )
-        self._async_gatherer.add_task(self._dummy.run())
+        self._init_flag = True
 
     def _create_message(self, message):
         message = f"[{self.__class__.__name__}:VCS{self._vcs_id}] {message}"
         return message
 
     async def bind_vppb(self, dsp_device: DownstreamPortDevice, vppb_index: int):
+        if self._init_flag:
+            self._async_gatherer.add_task(self._dummy.run())
+            self._init_flag = False
         if vppb_index >= len(self._bind_slots) or vppb_index < 0:
             raise Exception("vppb_index is out of bound")
 
@@ -148,6 +151,9 @@ class PortBinder(RunnableComponent):
 
     # TODO: vppb -- unbind need to be fiexed
     async def unbind_vppb(self, vppb_index: int):
+        if self._init_flag:
+            self._async_gatherer.add_task(self._dummy.run())
+            self._init_flag = False
         if vppb_index >= len(self._bind_slots) or vppb_index < 0:
             raise Exception("vppb_index is out of bound")
 

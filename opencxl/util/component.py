@@ -113,5 +113,4 @@ class RunnableComponent(LabeledComponent):
         while self._status != COMPONENT_STATUS.RUNNING:
             logger.debug(self._create_message("Not running yet. Waiting"))
             await self._condition.wait()
-        print("-----------",self._label)
         self._condition.release()

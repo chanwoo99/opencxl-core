@@ -8,7 +8,7 @@ else
 endif
 
 test:
-	poetry run pytest --cov --cov-report=term-missing -n $(NPROC)
+	poetry run pytest --cov --cov-report=term-missing -n 128
 	rm -f mem*.bin
 
 lint:
