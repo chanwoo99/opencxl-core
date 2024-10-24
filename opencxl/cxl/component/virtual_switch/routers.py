@@ -204,7 +204,7 @@ class ConfigSpaceRouter(CxlRouter):
         self._upstream_connection_fifo = upstream_vppb_connection.cfg_fifo
         self._downstream_connections = port_binder.get_bind_slots()
         self._downstream_connection_fifos = []
-        for bind_slot in self._downstream_connections:
+        for bind_slot in self._downstream_connections:  
             if bind_slot.status == BIND_STATUS.BOUND:
                 self._downstream_connection_fifos.append(
                     bind_slot.vppb.get_upstream_connection().cfg_fifo

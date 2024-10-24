@@ -40,6 +40,7 @@ class ConfigSpaceManager(RunnableComponent):
         downstream_fifo: Optional[FifoPair] = None,
         label: Optional[str] = None,
         device_type=PCI_DEVICE_TYPE.ENDPOINT,
+        is_mld: bool = False
     ):
         super().__init__()
         if device_type != PCI_DEVICE_TYPE.ENDPOINT and downstream_fifo is None:

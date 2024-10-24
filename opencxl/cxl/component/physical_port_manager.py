@@ -12,8 +12,8 @@ from typing import List, Dict, Optional, cast
 from opencxl.cxl.device.port_device import CxlPortDevice
 from opencxl.cxl.device.upstream_port_device import UpstreamPortDevice
 from opencxl.cxl.device.pci_to_pci_bridge_device import PPBDevice
-from opencxl.cxl.device.downstream_port_device import DownstreamPortSld
-from opencxl.cxl.device.config.logical_device import SingleLogicalDeviceConfig
+from opencxl.cxl.device.downstream_port_device import DownstreamPort
+from opencxl.cxl.device.config.logical_device import SingleLogicalDeviceConfig, MultiLogicalDeviceConfig
 from opencxl.cxl.component.switch_connection_manager import SwitchConnectionManager
 from opencxl.cxl.component.virtual_switch.port_binder import BindProcessor
 from opencxl.cxl.component.cxl_component import (
@@ -53,14 +53,21 @@ class PhysicalPortManager(RunnableComponent):
 
         self._switch_connection_manager = switch_connection_manager
         self._device_configs = device_configs
+        device_index = 0
         for port_index, port_config in enumerate(port_configs):
             transport_connection = self._switch_connection_manager.get_cxl_connection(port_index)
             if port_config.type == PORT_TYPE.USP:
                 self._port_devices.append(UpstreamPortDevice(transport_connection, port_index))
                 self._ppb_binds.append(None)
             else:
-                physical_port = DownstreamPortSld(transport_connection, port_index)
-                ppb = PPBDevice(port_index)
+                device_config = self._device_configs[device_index]
+                if isinstance(device_config, MultiLogicalDeviceConfig):
+                    ld_count = len(device_config.ld_indexes)
+                else:
+                    ld_count = 1
+                device_index += 1
+                physical_port = DownstreamPort(transport_connection, port_index, ld_count)
+                ppb = PPBDevice(port_index,ld_count)
                 self._port_devices.append(physical_port)
                 self._ppb_devices.append(ppb)
                 bind = BindProcessor(0,0, ppb.get_downstream_connection(), physical_port.get_transport_connection())

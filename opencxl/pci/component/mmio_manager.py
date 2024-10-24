@@ -50,6 +50,7 @@ class MmioManager(PacketProcessor):
         upstream_fifo: FifoPair,
         downstream_fifo: Optional[FifoPair] = None,
         label: Optional[str] = None,
+        is_mld: bool = False
     ):
         self._downstream_fifo: Optional[FifoPair]
         self._upstream_fifo: FifoPair

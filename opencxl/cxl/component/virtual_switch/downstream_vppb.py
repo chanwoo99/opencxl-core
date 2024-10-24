@@ -66,6 +66,7 @@ class DownstreamVppb(Vppb):
         super().__init__()
         self._vppb_index = vppb_index
         self._vcs_id = vcs_id
+        self.ld_id = -1
 
 
     def _get_label(self) -> str:

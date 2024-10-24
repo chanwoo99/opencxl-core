@@ -23,7 +23,7 @@ from opencxl.cxl.component.virtual_switch.downstream_vppb import DownstreamVppb
 
 from opencxl.cxl.device.port_device import CxlPortDevice
 from opencxl.cxl.device.upstream_port_device import UpstreamPortDevice
-from opencxl.cxl.device.downstream_port_device import DownstreamPortSld, DummyConfig
+from opencxl.cxl.device.downstream_port_device import DownstreamPort, DummyConfig
 from opencxl.pci.device.pci_device import PciDevice
 from opencxl.cxl.device.pci_to_pci_bridge_device import PPBDevice
 from opencxl.util.component import RunnableComponent
@@ -93,6 +93,9 @@ class CxlVirtualSwitch(RunnableComponent):
         # NOTE: Make PortBinder
         self._port_binder = PortBinder(self._id, self._downstream_vppbs)
 
+        # NOTE: Pesudo FM
+        self._pesudo_fm_ld_id = {}
+
     def init_manager(self):
         # NOTE: Make Routers
         self._cxl_io_router = CxlIoRouter(
@@ -121,7 +124,9 @@ class CxlVirtualSwitch(RunnableComponent):
             if port_index == -1:
                 await self.unbind_vppb(vppb_index)
             else:
-                await self.bind_vppb(port_index, vppb_index)
+                ld_id = self._pesudo_fm_ld_id.get(port_index, 0)
+                self._pesudo_fm_ld_id[port_index] = ld_id + 1
+                await self.bind_vppb(port_index, vppb_index, ld_id)
 
     async def _run(self):
         await self._bind_initial_vppb()
@@ -151,7 +156,7 @@ class CxlVirtualSwitch(RunnableComponent):
         ]
         await gather(*tasks)
 
-    async def bind_vppb(self, port_index: int, vppb_index: int):
+    async def bind_vppb(self, port_index: int, vppb_index: int, ld_id: int = 0):
         if port_index < 0 or port_index >= len(self._physical_ports):
             raise Exception("port_index is out of bound")
 
@@ -162,14 +167,15 @@ class CxlVirtualSwitch(RunnableComponent):
         logger.info(
             self._create_message(f"Started Binding physical port {port_index} to vPPB {vppb_index}")
         )
-        dsp_device = cast(DownstreamPortSld, port_device)
+        dsp_device = cast(DownstreamPort, port_device)
 
-        vppb.bind_to_physical_port(dsp_device)
+        vppb.bind_to_physical_port(dsp_device, ld_id)
+        vppb.ld_id = ld_id
 
         vppb.set_routing_table(self._routing_table)
         vppb.set_vppb_index(vppb_index)
         await self._call_event_handler(vppb_index, PPB_BINDING_STATUS.BIND_OR_UNBIND_IN_PROGRESS)
-        await self._port_binder.bind_vppb(dsp_device, vppb_index)
+        await self._port_binder.bind_vppb(dsp_device, vppb_index, ld_id)
         logger.info(
             self._create_message(
                 f"Succcessfully bound physical port {port_index} to vPPB {vppb_index}"
@@ -177,16 +183,17 @@ class CxlVirtualSwitch(RunnableComponent):
         )
         await self._call_event_handler(vppb_index, PPB_BINDING_STATUS.BOUND_LD)
 
-    async def unbind_vppb(self, vppb_index: int):
+    async def unbind_vppb(self, vppb_index: int, ld_id: int = 0):
         logger.info(self._create_message(f"Started unbinding physical port from vPPB {vppb_index}"))
         await self._call_event_handler(vppb_index, PPB_BINDING_STATUS.BIND_OR_UNBIND_IN_PROGRESS)
-        await self._port_binder.unbind_vppb(vppb_index)
+        dsp = self._port_binder[vppb_index].dsp
+        await self._port_binder.unbind_vppb(vppb_index, ld_id)
         logger.info(
             self._create_message(f"Succcessfully unbound physical port from vPPB {vppb_index}")
         )
         await self._call_event_handler(vppb_index, PPB_BINDING_STATUS.UNBOUND)
-        # need to be fixed
-        self._downstream_vppbs[vppb_index].unbind_from_physical_port()
+        self._downstream_vppbs[vppb_index].unbind_from_physical_port(dsp, ld_id)
+        self._downstream_vppbs[vppb_index].ld_id = None
 
     async def _call_event_handler(self, vppb_id: int, binding_status: PPB_BINDING_STATUS):
         if not self._event_handler:

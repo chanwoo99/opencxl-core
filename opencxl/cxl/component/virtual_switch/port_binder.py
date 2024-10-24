@@ -14,7 +14,7 @@ from opencxl.cxl.component.cxl_connection import CxlConnection
 from opencxl.cxl.component.virtual_switch.vppb import Vppb
 from opencxl.cxl.component.virtual_switch.upstream_vppb import UpstreamVppb
 from opencxl.cxl.component.virtual_switch.downstream_vppb import DownstreamVppb
-from opencxl.cxl.device.downstream_port_device import DownstreamPortSld
+from opencxl.cxl.device.downstream_port_device import DownstreamPort
 from opencxl.util.async_gatherer import AsyncGatherer
 from opencxl.util.component import RunnableComponent
 
@@ -98,7 +98,7 @@ class BindSlot:
     vppb: Vppb
     status: BIND_STATUS = BIND_STATUS.INIT
     processor: Optional[BindProcessor] = None
-    dsp: Optional[DownstreamPortSld] = None
+    dsp: Optional[DownstreamPort] = None
 
 
 class PortBinder(RunnableComponent):
@@ -118,7 +118,7 @@ class PortBinder(RunnableComponent):
         message = f"[{self.__class__.__name__}:VCS{self._vcs_id}] {message}"
         return message
 
-    async def bind_vppb(self, dsp_device: DownstreamPortSld, vppb_index: int):
+    async def bind_vppb(self, dsp_device: DownstreamPort, vppb_index: int, ld_id:int = 0):
         if vppb_index >= len(self._bind_slots) or vppb_index < 0:
             raise Exception("vppb_index is out of bound")
 
@@ -134,7 +134,7 @@ class PortBinder(RunnableComponent):
         bind_slot.vppb = self._vppbs[vppb_index]
         downstream_connection = bind_slot.vppb.get_downstream_connection()
         #upstream_connection = dsp_device.get_transport_connection()
-        upstream_connection = dsp_device.get_ppb_device().get_upstream_connection()
+        upstream_connection = dsp_device.get_ppb_device().get_upstream_connection()[ld_id]
         bind_slot.processor = BindProcessor(
             self._vcs_id, vppb_index, downstream_connection, upstream_connection
         )
@@ -142,7 +142,7 @@ class PortBinder(RunnableComponent):
         bind_slot.status = BIND_STATUS.BOUND
 
     # TODO: vppb -- unbind need to be fiexed
-    async def unbind_vppb(self, vppb_index: int):
+    async def unbind_vppb(self, vppb_index: int, ld_id:int = 0):
         if vppb_index >= len(self._bind_slots) or vppb_index < 0:
             raise Exception("vppb_index is out of bound")
 

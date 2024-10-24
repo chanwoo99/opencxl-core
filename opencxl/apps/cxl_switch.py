@@ -50,7 +50,7 @@ from opencxl.cxl.cci.vendor_specfic import (
     GetConnectedDevicesCommand,
 )
 from opencxl.util.component import RunnableComponent
-from opencxl.cxl.device.config.logical_device import SingleLogicalDeviceConfig
+from opencxl.cxl.device.config.logical_device import SingleLogicalDeviceConfig, MultiLogicalDeviceConfig
 
 
 @dataclass
@@ -71,7 +71,7 @@ class CxlSwitch(RunnableComponent):
     def __init__(
         self,
         switch_config: CxlSwitchConfig,
-        device_configs: List[SingleLogicalDeviceConfig],
+        device_configs: List[SingleLogicalDeviceConfig | MultiLogicalDeviceConfig],
         start_mctp: bool = True,
     ):
         super().__init__()
